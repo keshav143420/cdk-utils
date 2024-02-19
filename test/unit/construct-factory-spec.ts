@@ -10,10 +10,12 @@ _chai.use(_chaiAsPromised);
 import { Construct } from 'constructs';
 import { Stack, App } from 'aws-cdk-lib';
 import { testValues as _testValues } from '@vamship/test-utils';
-import { Promise } from 'bluebird';
+import bluebird from 'bluebird';
 
-import ConstructFactory from '../../src/construct-factory';
-import IConstructProps from '../../src/construct-props';
+import ConstructFactory from '../../src/construct-factory.js';
+import IConstructProps from '../../src/construct-props.js';
+
+const { Promise } = bluebird;
 
 describe('ConstructFactory', () => {
     class MockConstructFactory extends ConstructFactory<Construct> {
@@ -22,13 +24,13 @@ describe('ConstructFactory', () => {
 
         protected async _init(
             scope: Stack,
-            props: IConstructProps
+            props: IConstructProps,
         ): Promise<Construct> {
             const construct = await new Promise<Construct>(
                 (resolve, reject) => {
                     this._initResolve = resolve;
                     this._initReject = reject;
-                }
+                },
             );
             return construct as Construct;
         }
@@ -57,13 +59,13 @@ describe('ConstructFactory', () => {
     }
 
     function _createInstance(
-        id = _testValues.getString('id')
+        id = _testValues.getString('id'),
     ): MockConstructFactory {
         return new MockConstructFactory(id);
     }
 
     function _createScope(
-        stackName = _testValues.getString('stackName')
+        stackName = _testValues.getString('stackName'),
     ): Stack {
         return {
             stackName,
@@ -80,9 +82,9 @@ describe('ConstructFactory', () => {
             const inputs = _testValues.allButString('');
             const error = 'Invalid id (arg #1)';
 
-            inputs.forEach((id) => {
+            inputs.forEach((id: _testValues.AnyInput) => {
                 const wrapper = (): MockConstructFactory =>
-                    new MockConstructFactory(id);
+                    new MockConstructFactory(id as string);
 
                 expect(wrapper).to.throw(error);
             });
@@ -109,7 +111,7 @@ describe('ConstructFactory', () => {
             const result = Promise.map(inputs, (scope) => {
                 const factory = _createInstance();
                 const props = _createProps();
-
+                // @ts-ignore
                 const ret = factory.init(scope, props);
                 return expect(ret).to.be.rejectedWith(error);
             });
@@ -118,16 +120,19 @@ describe('ConstructFactory', () => {
         });
 
         it('should throw an error if invoked without valid props', async () => {
-            const inputs = _testValues.allButObject();
+            const inputs: _testValues.AnyInputList = _testValues.allButObject();
             const error = 'Invalid props (arg #2)';
 
-            const result = Promise.map(inputs, (props) => {
-                const factory = _createInstance();
-                const scope = _createScope();
-
-                const ret = factory.init(scope, props);
-                return expect(ret).to.be.rejectedWith(error);
-            });
+            const result = Promise.map(
+                inputs,
+                (props: _testValues.AnyInput) => {
+                    const factory = _createInstance();
+                    const scope = _createScope();
+                    // @ts-ignore
+                    const ret = factory.init(scope, props);
+                    return expect(ret).to.be.rejectedWith(error);
+                },
+            );
 
             await expect(result).to.have.been.fulfilled;
         });
@@ -157,7 +162,8 @@ describe('ConstructFactory', () => {
             const props = _createProps();
 
             const factory = _createInstance(id);
-            const initMock = _sinon.stub(factory, '_init');
+            const methodName = '_init' as keyof MockConstructFactory;
+            const initMock = _sinon.stub(factory, methodName);
 
             expect(initMock).to.not.have.been.called;
 
@@ -211,7 +217,7 @@ describe('ConstructFactory', () => {
 
             const result = Promise.map(inputs, (scope) => {
                 const factory = _createInstance();
-
+                // @ts-ignore
                 const ret = factory.getConstruct(scope);
                 return expect(ret).to.be.rejectedWith(error);
             });

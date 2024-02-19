@@ -9,7 +9,7 @@ _chai.use(_chaiAsPromised);
 
 import { testValues as _testValues } from '@vamship/test-utils';
 
-import DirInfo from '../../src/dir-info';
+import DirInfo from '../../src/dir-info.js';
 const SEP = _path.sep;
 
 describe('DirInfo', () => {
@@ -23,7 +23,7 @@ describe('DirInfo', () => {
             const error = 'Invalid path (arg #1)';
 
             input.forEach((path) => {
-                const wrapper = (): DirInfo => new DirInfo(path);
+                const wrapper = (): DirInfo => new DirInfo(path as string);
 
                 expect(wrapper).to.throw(error);
             });
@@ -179,7 +179,8 @@ describe('DirInfo', () => {
 
             input.forEach((basePath) => {
                 const dirInfo = _createInstance();
-                const wrapper = (): string => dirInfo.getApiRoutePath(basePath);
+                const wrapper = (): string =>
+                    dirInfo.getApiRoutePath(basePath as string);
 
                 expect(wrapper).to.throw(error);
             });
@@ -222,7 +223,7 @@ describe('DirInfo', () => {
 
         it('should resolve the base path if the base path was not an absolute path', () => {
             const path = _path.resolve(
-                `ignore${SEP}this${SEP}myapi${SEP}foo${SEP}target`
+                `ignore${SEP}this${SEP}myapi${SEP}foo${SEP}target`,
             );
             const basePath = `ignore${SEP}this`;
             const dirInfo = _createInstance(path);
@@ -235,7 +236,7 @@ describe('DirInfo', () => {
 
         it('should normalize the base path if the base path was not normalized', () => {
             const path = _path.resolve(
-                `ignore${SEP}this${SEP}myapi${SEP}foo${SEP}target`
+                `ignore${SEP}this${SEP}myapi${SEP}foo${SEP}target`,
             );
             const basePath = `ignore${SEP}this${SEP}foo${SEP}..`;
             const dirInfo = _createInstance(path);
@@ -252,7 +253,7 @@ describe('DirInfo', () => {
             const input = _testValues.allButString();
             const error = 'Invalid name (arg #1)';
 
-            input.forEach((name) => {
+            input.forEach((name: any) => {
                 const dirInfo = _createInstance();
                 const wrapper = (): DirInfo => dirInfo.createChild(name);
 

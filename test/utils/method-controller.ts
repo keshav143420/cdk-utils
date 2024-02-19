@@ -32,11 +32,12 @@ export default class MethodController {
      */
     constructor(
         steps: ISteps,
-        resolver: (step: number) => IterableIterator<unknown>
+        resolver: (step: number) => IterableIterator<unknown>,
     ) {
-        Object.keys(steps).forEach((key) => {
-            this[key] = steps[key];
-        });
+        // Object.keys(steps).forEach(function (key) {
+        //     // const stepKey = key as keyof MethodController;
+        //     this[key] = steps[key];
+        // });
         this._resolver = resolver;
         this._steps = steps;
     }
@@ -71,7 +72,7 @@ export default class MethodController {
 
         while (index < step && !result.done) {
             result = iterator.next();
-            await _asyncHelper.wait(1)();
+            await _asyncHelper.wait(1);
             index++;
         }
 

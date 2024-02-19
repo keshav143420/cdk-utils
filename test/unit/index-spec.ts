@@ -6,13 +6,16 @@ import _chaiAsPromised from 'chai-as-promised';
 _chai.use(_sinonChai);
 _chai.use(_chaiAsPromised);
 
-import * as _index from '../../src/index';
-import ConstructBuilder from '../../src/construct-builder';
-import ConstructFactory from '../../src/construct-factory';
+import {
+    ConstructBuilder as IndexCB,
+    ConstructFactory as IndexCF,
+} from '../../src/index.js';
+import ConstructBuilder from '../../src/construct-builder.js';
+import ConstructFactory from '../../src/construct-factory.js';
 
 describe('index', () => {
     it('should implement methods required by the interface', function () {
-        expect(_index.ConstructBuilder).to.equal(ConstructBuilder);
-        expect(_index.ConstructFactory).to.equal(ConstructFactory);
+        expect(IndexCB).to.equal(ConstructBuilder);
+        expect(IndexCF).to.equal(ConstructFactory);
     });
 });
