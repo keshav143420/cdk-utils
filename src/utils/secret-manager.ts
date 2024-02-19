@@ -1,6 +1,21 @@
 import { argValidator as _argValidator } from '@vamship/arg-utils';
-import { config as awsConfig, KMS, SharedIniFileCredentials } from 'aws-sdk';
-import { Promise } from 'bluebird';
+import * as awsSdk from 'aws-sdk';
+import bluebird from 'bluebird';
+
+const { Promise } = bluebird;
+
+const { config, SharedIniFileCredentials } = awsSdk;
+
+interface ListAliasesResponse {
+    Aliases?: awsSdk.KMS.AliasList;
+}
+
+// Define the types for the Alias object
+interface Alias {
+    AliasName?: string;
+    AliasArn?: string;
+    TargetKeyId?: string;
+}
 
 /**
  * Utility class that can be used to encrypt secret values using a kms key.
@@ -32,21 +47,24 @@ export default class SecretManager {
      */
     public static async create(
         alias: string,
-        profile = process.env.AWS_PROFILE
+        profile = process.env.AWS_PROFILE,
     ): Promise<SecretManager> {
         _argValidator.checkString(alias, 1, 'Invalid alias (arg #1)');
         _argValidator.checkString(profile, 1, 'Invalid profile (arg #2)');
 
         alias = `alias/${alias}`;
 
-        awsConfig.credentials = new SharedIniFileCredentials({ profile });
-        const kms = new KMS();
+        config.credentials = new SharedIniFileCredentials({ profile });
+        const kms = new awsSdk.KMS();
+        const listAliasesResponse: ListAliasesResponse = await kms
+            .listAliases({})
+            .promise();
 
-        const listAliases = Promise.promisify(kms.listAliases.bind(kms));
+        // Extract aliases from the response
+        const aliases: Alias[] = listAliasesResponse.Aliases || [];
 
-        const result = await listAliases({});
-        const keyInfo = result.Aliases.find(
-            ({ AliasName: aliasName }) => aliasName === alias
+        const keyInfo = aliases.find(
+            (alias: Alias) => alias.AliasName === alias,
         );
 
         if (!keyInfo) {
@@ -57,7 +75,7 @@ export default class SecretManager {
 
         if (!keyId) {
             throw new Error(
-                `Alias is not associated with a target key id: [${alias}]`
+                `Alias is not associated with a target key id: [${alias}]`,
             );
         }
 
@@ -74,17 +92,16 @@ export default class SecretManager {
     public async encrypt(plaintext: string): Promise<string> {
         _argValidator.checkString(plaintext, 1, 'Invalid plaintext (arg #1)');
 
-        awsConfig.credentials = new SharedIniFileCredentials({
+        config.credentials = new SharedIniFileCredentials({
             profile: this._profile,
         });
-        const kms = new KMS();
-
-        const encrypt = Promise.promisify(kms.encrypt.bind(kms));
-
-        const result = await encrypt({
-            KeyId: this._keyId,
-            Plaintext: plaintext,
-        });
+        const kms = new awsSdk.KMS();
+        const result = await kms
+            .encrypt({
+                KeyId: this._keyId,
+                Plaintext: plaintext,
+            })
+            .promise();
 
         if (!result || !result.CiphertextBlob) {
             throw new Error('Error encrypting string using KMS');

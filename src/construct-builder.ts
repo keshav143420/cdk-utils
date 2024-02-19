@@ -1,19 +1,22 @@
-import _fs from 'fs';
+import fs from 'fs/promises';
 import _path from 'path';
 
 import { Stack } from 'aws-cdk-lib';
 
 import { argValidator as _argValidator } from '@vamship/arg-utils';
-import { Promise } from 'bluebird';
+import bluebird from 'bluebird';
 
-import ConstructFactory from './construct-factory';
-import DirInfo from './dir-info';
+import ConstructFactory from './construct-factory.js';
+import DirInfo from './dir-info.js';
 
-import IConstructProps from './construct-props';
+import IConstructProps from './construct-props.js';
+import { MyNewType } from './types/MyNewType.js';
 
-function _loadModule(path: string): unknown {
-    const module = require(path); // eslint-disable-line @typescript-eslint/no-var-requires
-    return module.default || module;
+const { Promise } = bluebird;
+
+async function _loadModule(path: string): Promise<ConstructFactory<any>> {
+    const { default: module } = await import(path);
+    return module;
 }
 
 /**
@@ -26,7 +29,7 @@ function _loadModule(path: string): unknown {
  */
 export default class ConstructBuilder {
     private _rootPath: string;
-    private _factoryModules?: ConstructFactory<any>[]; // eslint-disable-line @typescript-eslint/no-explicit-any
+    private _factoryModules?: MyNewType[]; // eslint-disable-line @typescript-eslint/no-explicit-any
 
     /**
      * @param rootPath The path to the root directory that contains the
@@ -47,34 +50,40 @@ export default class ConstructBuilder {
      * @param dirInfo An object representing the directory that is
      *        currently being traversed.
      */
-    private static async _loadRecursive(directory: DirInfo): Promise<void> {
-        _argValidator.checkInstance(
-            directory,
-            DirInfo,
-            'Invalid directory (arg #1)'
-        );
-        const readdir = Promise.promisify(_fs.readdir.bind(_fs));
+    static async _loadRecursive(directory: DirInfo): Promise<MyNewType[]> {
+        // _argValidator.checkInstance<DirInfo>(
+        //   directory,
+        //   DirInfo,
+        //   'Invalid directory (arg #1)'
+        // );
 
-        const files = await readdir(directory.absPath, {
+        const files = await fs.readdir(directory.absPath, {
             withFileTypes: true,
         });
 
-        const results = await Promise.map(files, async (file) => {
-            const { name } = file;
-            if (file.isDirectory()) {
-                return await ConstructBuilder._loadRecursive(
-                    directory.createChild(name)
-                );
-            } else if (file.isFile() && name.endsWith('.js')) {
-                const modulePath = _path.resolve(directory.absPath, name);
-                return {
-                    construct: _loadModule(modulePath),
-                    directory,
-                };
-            }
-        })
-            .filter((item) => !!item)
-            .reduce((result, modules) => result.concat(modules), []);
+        const results = (
+            await Promise.map(files, async (file) => {
+                const { name } = file;
+                if (file.isDirectory()) {
+                    return await ConstructBuilder._loadRecursive(
+                        directory.createChild(name),
+                    );
+                } else if (file.isFile() && name.endsWith('.js')) {
+                    const modulePath = _path.resolve(directory.absPath, name);
+                    return [
+                        {
+                            construct: await _loadModule(modulePath),
+                            directory,
+                        },
+                    ];
+                }
+            })
+        )
+            .filter((item): item is MyNewType[] => !!item)
+            .reduce(
+                (result, modules) => result.concat(modules || []),
+                [] as MyNewType[],
+            );
 
         return results;
     }
@@ -87,20 +96,20 @@ export default class ConstructBuilder {
      * @param [props] An optional collection of properties that will be passed
      *        down to the init/config operations.
      */
-    async build(scope: Stack, props: IConstructProps): Promise<void> {
+    async build(scope: Stack, props: IConstructProps): Promise<void[]> {
         _argValidator.checkObject(scope, 'Invalid scope (arg #1)');
         props = Object.assign({}, props);
 
         const modules = await ConstructBuilder._loadRecursive(
-            new DirInfo(this._rootPath)
+            new DirInfo(this._rootPath),
         );
 
         this._factoryModules = modules.filter(
-            ({ construct }) => construct instanceof ConstructFactory
+            ({ construct }) => construct instanceof ConstructFactory,
         );
 
         return Promise.map(this._factoryModules, ({ construct }) =>
-            construct.init(scope, props)
+            construct.init(scope, props),
         );
     }
 }

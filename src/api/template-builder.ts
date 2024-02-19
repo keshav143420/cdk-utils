@@ -1,6 +1,6 @@
 import { argValidator as _argValidator } from '@vamship/arg-utils';
 
-import IStatementOptions from './statement-options';
+import IStatementOptions from './statement-options.js';
 
 /**
  * A mapping from input sources to the actual source in the template mapping.
@@ -40,7 +40,7 @@ export default class TemplateBuilder {
     public mapFromBody(
         sourceProp: string,
         destProp: string = sourceProp,
-        defaultValue?: unknown
+        defaultValue?: unknown,
     ): TemplateBuilder {
         _argValidator.checkString(sourceProp, 1, 'Invalid sourceProp (arg #1)');
         _argValidator.checkString(destProp, 1, 'Invalid destProp (arg #2)');
@@ -70,7 +70,7 @@ export default class TemplateBuilder {
     public mapStringFromUrl(
         sourceProp: string,
         destProp: string = sourceProp,
-        defaultValue?: unknown
+        defaultValue?: unknown,
     ): TemplateBuilder {
         _argValidator.checkString(sourceProp, 1, 'Invalid sourceProp (arg #1)');
         _argValidator.checkString(destProp, 1, 'Invalid destProp (arg #2)');
@@ -100,7 +100,7 @@ export default class TemplateBuilder {
     public mapNumberFromUrl(
         sourceProp: string,
         destProp: string = sourceProp,
-        defaultValue?: unknown
+        defaultValue?: unknown,
     ): TemplateBuilder {
         _argValidator.checkString(sourceProp, 1, 'Invalid sourceProp (arg #1)');
         _argValidator.checkString(destProp, 1, 'Invalid destProp (arg #2)');
@@ -143,7 +143,7 @@ export default class TemplateBuilder {
             };
         },
         fieldName = 'Authorization',
-        destProp = '_user'
+        destProp = '_user',
     ): TemplateBuilder {
         _argValidator.checkObject(props, 'Invalid props (arg #1)');
         _argValidator.checkString('fieldName', 1, 'Invalid fieldName (arg #2)');
@@ -198,7 +198,7 @@ export default class TemplateBuilder {
             | number
             | boolean
             | Record<string, unknown>
-            | Array<unknown>
+            | Array<unknown>,
     ): TemplateBuilder {
         _argValidator.checkString(destProp, 1, 'Invalid destProp (arg #1)');
 
@@ -231,7 +231,7 @@ export default class TemplateBuilder {
         source: string,
         sourceProp: string,
         destProp: string,
-        options: IStatementOptions
+        options: IStatementOptions,
     ): TemplateBuilder {
         _argValidator.checkString(sourceProp, 1, 'Invalid source (arg #1)');
         _argValidator.checkString(sourceProp, 1, 'Invalid sourceProp (arg #2)');
@@ -269,9 +269,10 @@ export default class TemplateBuilder {
         source: string,
         sourceProp: string,
         destProp: string,
-        options?: IStatementOptions
+        options?: IStatementOptions,
     ): void {
-        const mappedSource = SOURCE_MAP[source];
+        const key = source as keyof typeof SOURCE_MAP;
+        const mappedSource = SOURCE_MAP[key];
         _argValidator.checkString(mappedSource, 1, 'Invalid source (arg #1)');
         _argValidator.checkString(sourceProp, 1, 'Invalid sourceProp (arg #2)');
         _argValidator.checkString(destProp, 1, 'Invalid destProp (arg #3)');
@@ -283,7 +284,7 @@ export default class TemplateBuilder {
                 escapeNewLine: false,
                 defaultValue: undefined,
             },
-            options
+            options,
         );
 
         const { noQuotes, noComma, escapeNewLine, defaultValue } = options;
@@ -314,7 +315,7 @@ export default class TemplateBuilder {
                     : JSON.stringify(defaultValue);
 
             template.push(
-                `  ${comma}"${destProp}": ${quote}${value}${sourcePropTransform}${quote}`
+                `  ${comma}"${destProp}": ${quote}${value}${sourcePropTransform}${quote}`,
             );
         } else {
             template.push(`  ${comma}"${destProp}": null`);

@@ -23,12 +23,21 @@ import { Role } from 'aws-cdk-lib/aws-iam';
 import { IFunction } from 'aws-cdk-lib/aws-lambda';
 import { Arn, ArnFormat, Stack } from 'aws-cdk-lib';
 import { argValidator as _argValidator } from '@vamship/arg-utils';
-import { Promise } from 'bluebird';
+import bluebird from 'bluebird';
 
-import ConstructFactory from '../construct-factory';
-import IConstructProps from '../construct-props';
-import IHttpMethodFactoryOptions from './http-method-factory-options';
-import IRequestParams from './request-params';
+import ConstructFactory from '../construct-factory.js';
+import IConstructProps from '../construct-props.js';
+import IHttpMethodFactoryOptions from './http-method-factory-options.js';
+import IRequestParams from './request-params.js';
+import { Boolean } from '../../node_modules/aws-sdk/clients/cloudtrail.js';
+
+const { Promise } = bluebird;
+
+interface Params {
+    header: Record<string, any>;
+    path: Record<string, boolean>;
+    querystring: Record<string, any>;
+}
 
 const RESPONSE_TEMPLATE_ERROR = {
     'application/json': `{
@@ -67,7 +76,7 @@ export default class HttpMethodFactory extends ConstructFactory<Method> {
         filePath: string,
         options: IHttpMethodFactoryOptions = {
             enableCors: true,
-        }
+        },
     ) {
         _argValidator.checkString(filePath, 1, 'Invalid filePath (arg #1)');
 
@@ -97,7 +106,7 @@ export default class HttpMethodFactory extends ConstructFactory<Method> {
      */
     protected async _init(
         scope: Stack,
-        props: IConstructProps
+        props: IConstructProps,
     ): Promise<Method> {
         const apiFactory = props.apiFactory as ConstructFactory<RestApi>;
         const apiRootDir = props.apiRootDir as string;
@@ -214,10 +223,10 @@ export default class HttpMethodFactory extends ConstructFactory<Method> {
         _argValidator.checkString(
             requestPath,
             1,
-            'Invalid requestPath (arg #1)'
+            'Invalid requestPath (arg #1)',
         );
 
-        const params = {
+        const params: Params = {
             header: {},
             path: {},
             querystring: {},
@@ -294,7 +303,7 @@ export default class HttpMethodFactory extends ConstructFactory<Method> {
      * @returns Reference to the authorizer.
      */
     protected async getAuthorizer(
-        scope: Stack
+        scope: Stack,
     ): Promise<IAuthorizer | undefined> {
         return undefined;
     }
@@ -309,7 +318,7 @@ export default class HttpMethodFactory extends ConstructFactory<Method> {
      * @returns Reference to the lambda function, or the name of the function.
      */
     protected async getLambdaHandler(
-        scope: Stack
+        scope: Stack,
     ): Promise<IFunction | string | undefined> {
         return undefined;
     }
@@ -324,7 +333,7 @@ export default class HttpMethodFactory extends ConstructFactory<Method> {
      * @returns Reference to the IAM role
      */
     protected async getLambdaInvokeRole(
-        scope: Stack
+        scope: Stack,
     ): Promise<Role | undefined> {
         return undefined;
     }
@@ -342,11 +351,11 @@ export default class HttpMethodFactory extends ConstructFactory<Method> {
      * @returns An array of method responses.
      */
     protected async getMethodResponses(
-        scope: Stack
+        scope: Stack,
     ): Promise<MethodResponse[]> {
         _argValidator.checkObject(scope, 'Invalid scope (arg #1)');
 
-        const responseParameters = {};
+        const responseParameters: Record<string, boolean> = {};
         Object.keys(this.responseHeaders).forEach((header) => {
             responseParameters[`method.response.header.${header}`] = true;
         });
@@ -387,17 +396,17 @@ export default class HttpMethodFactory extends ConstructFactory<Method> {
      * @returns An array of method responses.
      */
     protected async getIntegrationResponses(
-        scope: Stack
+        scope: Stack,
     ): Promise<IntegrationResponse[]> {
         _argValidator.checkObject(scope, 'Invalid scope (arg #1)');
 
         const responseParameters = Object.keys(this.responseHeaders).reduce(
-            (result, header) => {
+            (result: Record<string, string>, header) => {
                 result[`method.response.header.${header}`] =
                     this.responseHeaders[header];
                 return result;
             },
-            {}
+            {},
         );
 
         const successResponseTemplate = {
@@ -475,29 +484,34 @@ export default class HttpMethodFactory extends ConstructFactory<Method> {
      */
     protected async buildMethodOptions(
         scope: Stack,
-        requestPath: string
+        requestPath: string,
     ): Promise<MethodOptions> {
         _argValidator.checkObject(scope, 'Invalid scope (arg #1)');
         _argValidator.checkString(
             requestPath,
             1,
-            'Invalid requestPath (arg #2)'
+            'Invalid requestPath (arg #2)',
         );
 
         const params = this.getRequestParameters(requestPath);
         const requestParameters = Object.keys(params).reduce(
             (result, sectionName) => {
+                const stepKey = sectionName as keyof IRequestParams;
                 // This should be - header, path or querystring
-                const section = params[sectionName];
+                const section = params[stepKey];
 
-                return Object.keys(section).reduce((result, name) => {
-                    const required = section[name];
-                    result[`method.request.${sectionName}.${name}`] = required;
+                return Object.keys(section).reduce(
+                    (result: Record<string, Boolean>, name) => {
+                        const required = section[name];
+                        result[`method.request.${sectionName}.${name}`] =
+                            required;
 
-                    return result;
-                }, result);
+                        return result;
+                    },
+                    result,
+                );
             },
-            {}
+            {},
         );
 
         return {
@@ -522,7 +536,7 @@ export default class HttpMethodFactory extends ConstructFactory<Method> {
      * @returns Lambda integration options
      */
     protected async buildLambdaIntegrationOptions(
-        scope: Stack
+        scope: Stack,
     ): Promise<LambdaIntegrationOptions> {
         _argValidator.checkObject(scope, 'Invalid scope (arg #1)');
 
@@ -548,7 +562,7 @@ export default class HttpMethodFactory extends ConstructFactory<Method> {
      * @returns Lambda integration options
      */
     protected async buildMockIntegrationOptions(
-        scope: Stack
+        scope: Stack,
     ): Promise<IntegrationOptions> {
         _argValidator.checkObject(scope, 'Invalid scope (arg #1)');
 
@@ -579,7 +593,7 @@ export default class HttpMethodFactory extends ConstructFactory<Method> {
         if (typeof handler === 'undefined') {
             // Use mock back end
             return new MockIntegration(
-                await this.buildMockIntegrationOptions(scope)
+                await this.buildMockIntegrationOptions(scope),
             );
         } else if (typeof handler === 'string') {
             // Use lambda back end but with the lambda handler name. This
@@ -592,7 +606,7 @@ export default class HttpMethodFactory extends ConstructFactory<Method> {
                     resourceName: handler,
                     arnFormat: ArnFormat.COLON_RESOURCE_NAME,
                 },
-                scope as Stack
+                scope as Stack,
             );
 
             return new AwsIntegration({
@@ -605,7 +619,7 @@ export default class HttpMethodFactory extends ConstructFactory<Method> {
             // Use lambda back end using the handler construct reference.
             return new LambdaIntegration(
                 handler,
-                await this.buildLambdaIntegrationOptions(scope)
+                await this.buildLambdaIntegrationOptions(scope),
             );
         }
     }
