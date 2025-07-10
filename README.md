@@ -31,6 +31,11 @@ While this project draws its inspiration from the now defunct
 [wysknd-aws-cf-generator](https://github.com/vamship/grunt-wysknd-aws-cf-generator),
 it now leverages the CDK which is supported by AWS.
 
+## Prerequisites
+
+- **Node.js:** Version 20 or higher is required.
+- **Module System:** This library is distributed as an ES Module (ESM).
+
 ## Installation
 
 This package can be installed using npm:
@@ -81,10 +86,15 @@ The content of a simple entrypoint file is shown below:
 ```js
 #!/usr/bin/env node
 
-const _path = require('path');
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const { App, Stack } = require('aws-cdk-lib');
-const { ConstructBuilder } = require('@vamship/cdk-utils');
+import { App, Stack } from 'aws-cdk-lib';
+import { ConstructBuilder } from '@vamship/cdk-utils';
+
+// For ESM, __dirname is not available directly.
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Initialize stacks
 const app = new App();
@@ -92,7 +102,7 @@ const stack1 = new Stack(app, 'my-stack-1');
 const stack2 = new Stack(app, 'my-stack-2');
 
 // Build out stack using resources under the constructs directory
-const rootDir = _path.join(__dirname, 'constructs');
+const rootDir = path.join(__dirname, 'constructs');
 
 // Initialize builder
 const builder = new ConstructBuilder(rootDir);
@@ -108,21 +118,20 @@ builder.build(stack1, { keyName: 'id' });
 
 #### Constructs
 
-The contents of the `users-table.js` file is shown below:
+The contents of the `users-table.js` file (now `users-table.mjs` or `users-table.js` if your project is type module) is shown below:
 
 ```js
-'use strict';
-
-const { ConstructFactory } = require('@vamship/cdk-utils');
-const _dynamodb = require('aws-cdk-lib/aws-dynamodb');
+// users-table.js (ensure package.json has "type": "module")
+import { ConstructFactory } from '@vamship/cdk-utils';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 
 const factory = new ConstructFactory('user-table');
 
 factory._init = (scope, id, dirInfo, props) => {
-    return new _dynamodb.Table(scope, 'UsersTable', {
+    return new dynamodb.Table(scope, 'UsersTable', {
         partitionKey: {
             name: props.keyName,
-            type: _dynamodb.AttributeType.STRING,
+            type: dynamodb.AttributeType.STRING,
         },
     });
 };
@@ -131,7 +140,7 @@ factory._configure = () => {
     console.log('Configuring user table');
 };
 
-module.exports = factory;
+export default factory;
 ```
 
 Each resource is initialized by overriding the `_init()` method, and returning
@@ -152,24 +161,28 @@ The following is an example of the use of the `_configure()` method to setup
 permissions, in the `hello-func.js` file:
 
 ```js
-'use strict';
+// hello-func.js (ensure package.json has "type": "module")
+import { ConstructFactory } from '@vamship/cdk-utils';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const { ConstructFactory } = require('@vamship/cdk-utils');
-const _lambda = require('aws-cdk-lib/aws-lambda');
-const _path = require('path');
+import userTableConstruct from '../tables/users-table.js'; // Added .js extension
 
-const userTableConstruct = require('../tables/users-table');
+// For ESM, __dirname is not available directly.
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const factory = new ConstructFactory('hello-func');
 
-const handlerPath = _path.resolve(__dirname, '../../../src/');
+const handlerPath = path.resolve(__dirname, '../../../src/'); // Assuming 'src' relative to this example file
 console.log(handlerPath);
 
 factory._init = (scope, id, dirInfo, props) => {
-    return new _lambda.Function(scope, id, {
-        runtime: _lambda.Runtime.NODEJS_10_X,
+    return new lambda.Function(scope, id, {
+        runtime: lambda.Runtime.NODEJS_20_X, // Updated runtime
         handler: 'index.handler',
-        code: _lambda.Code.fromAsset(handlerPath),
+        code: lambda.Code.fromAsset(handlerPath),
     });
 };
 
@@ -183,7 +196,7 @@ factory._configure = (construct, scope, dirInfo, props) => {
     userTable.grantFullAccess(construct);
 };
 
-module.exports = factory;
+export default factory;
 ```
 
 ## Contributing

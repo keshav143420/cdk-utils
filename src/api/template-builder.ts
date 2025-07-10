@@ -1,6 +1,6 @@
-import { argValidator as _argValidator } from '@vamship/arg-utils';
+import { argValidator } from '@vamship/arg-utils';
 
-import IStatementOptions from './statement-options';
+import IStatementOptions from './statement-options.js';
 
 /**
  * A mapping from input sources to the actual source in the template mapping.
@@ -42,8 +42,8 @@ export default class TemplateBuilder {
         destProp: string = sourceProp,
         defaultValue?: unknown
     ): TemplateBuilder {
-        _argValidator.checkString(sourceProp, 1, 'Invalid sourceProp (arg #1)');
-        _argValidator.checkString(destProp, 1, 'Invalid destProp (arg #2)');
+        argValidator.checkString(sourceProp, 1, 'Invalid sourceProp (arg #1)');
+        argValidator.checkString(destProp, 1, 'Invalid destProp (arg #2)');
 
         const options: IStatementOptions = {
             noQuotes: true,
@@ -72,8 +72,8 @@ export default class TemplateBuilder {
         destProp: string = sourceProp,
         defaultValue?: unknown
     ): TemplateBuilder {
-        _argValidator.checkString(sourceProp, 1, 'Invalid sourceProp (arg #1)');
-        _argValidator.checkString(destProp, 1, 'Invalid destProp (arg #2)');
+        argValidator.checkString(sourceProp, 1, 'Invalid sourceProp (arg #1)');
+        argValidator.checkString(destProp, 1, 'Invalid destProp (arg #2)');
 
         const options: IStatementOptions = {
             noQuotes: false,
@@ -102,8 +102,8 @@ export default class TemplateBuilder {
         destProp: string = sourceProp,
         defaultValue?: unknown
     ): TemplateBuilder {
-        _argValidator.checkString(sourceProp, 1, 'Invalid sourceProp (arg #1)');
-        _argValidator.checkString(destProp, 1, 'Invalid destProp (arg #2)');
+        argValidator.checkString(sourceProp, 1, 'Invalid sourceProp (arg #1)');
+        argValidator.checkString(destProp, 1, 'Invalid destProp (arg #2)');
 
         const options: IStatementOptions = {
             noQuotes: true,
@@ -145,9 +145,9 @@ export default class TemplateBuilder {
         fieldName = 'Authorization',
         destProp = '_user'
     ): TemplateBuilder {
-        _argValidator.checkObject(props, 'Invalid props (arg #1)');
-        _argValidator.checkString('fieldName', 1, 'Invalid fieldName (arg #2)');
-        _argValidator.checkString('destProp', 1, 'Invalid destProp (arg #3)');
+        argValidator.checkObject(props, 'Invalid props (arg #1)');
+        argValidator.checkString('fieldName', 1, 'Invalid fieldName (arg #2)');
+        argValidator.checkString('destProp', 1, 'Invalid destProp (arg #3)');
 
         const comma = this._statements.length === 0 ? '' : ',';
         const randomSuffix = Math.random().toString(36).substring(2, 15);
@@ -200,7 +200,7 @@ export default class TemplateBuilder {
             | Record<string, unknown>
             | Array<unknown>
     ): TemplateBuilder {
-        _argValidator.checkString(destProp, 1, 'Invalid destProp (arg #1)');
+        argValidator.checkString(destProp, 1, 'Invalid destProp (arg #1)');
 
         let quote = '"';
         if (typeof value !== 'string') {
@@ -233,10 +233,10 @@ export default class TemplateBuilder {
         destProp: string,
         options: IStatementOptions
     ): TemplateBuilder {
-        _argValidator.checkString(sourceProp, 1, 'Invalid source (arg #1)');
-        _argValidator.checkString(sourceProp, 1, 'Invalid sourceProp (arg #2)');
-        _argValidator.checkString(destProp, 1, 'Invalid destProp (arg #3)');
-        _argValidator.checkObject(options, 'Invalid options (arg #4)');
+        argValidator.checkString(sourceProp, 1, 'Invalid source (arg #1)');
+        argValidator.checkString(sourceProp, 1, 'Invalid sourceProp (arg #2)');
+        argValidator.checkString(destProp, 1, 'Invalid destProp (arg #3)');
+        argValidator.checkObject(options, 'Invalid options (arg #4)');
 
         this._addStatement(source, sourceProp, destProp, options);
         return this;
@@ -272,9 +272,9 @@ export default class TemplateBuilder {
         options?: IStatementOptions
     ): void {
         const mappedSource = SOURCE_MAP[source];
-        _argValidator.checkString(mappedSource, 1, 'Invalid source (arg #1)');
-        _argValidator.checkString(sourceProp, 1, 'Invalid sourceProp (arg #2)');
-        _argValidator.checkString(destProp, 1, 'Invalid destProp (arg #3)');
+        argValidator.checkString(mappedSource, 1, 'Invalid source (arg #1)');
+        argValidator.checkString(sourceProp, 1, 'Invalid sourceProp (arg #2)');
+        argValidator.checkString(destProp, 1, 'Invalid destProp (arg #3)');
 
         options = Object.assign(
             {

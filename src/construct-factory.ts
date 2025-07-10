@@ -1,8 +1,8 @@
-import { argValidator as _argValidator } from '@vamship/arg-utils';
+import { argValidator } from '@vamship/arg-utils';
 import { IConstruct } from 'constructs';
 import { Stack, CfnResource } from 'aws-cdk-lib';
 
-import IConstructProps from './construct-props';
+import IConstructProps from './construct-props.js';
 
 /**
  * Represents a construct and its related init promise.
@@ -89,7 +89,7 @@ export default abstract class ConstructFactory<
      * @param id The id of the construct represented by this factory.
      */
     constructor(id: string) {
-        _argValidator.checkString(id, 1, 'Invalid id (arg #1)');
+        argValidator.checkString(id, 1, 'Invalid id (arg #1)');
         this._constructMap = {};
         this._id = id;
     }
@@ -156,8 +156,8 @@ export default abstract class ConstructFactory<
      *          has been initialized.
      */
     async init(scope: Stack, props: IConstructProps): Promise<void> {
-        _argValidator.checkObject(scope, 'Invalid scope (arg #1)');
-        _argValidator.checkObject(props, 'Invalid props (arg #2)');
+        argValidator.checkObject(scope, 'Invalid scope (arg #1)');
+        argValidator.checkObject(props, 'Invalid props (arg #2)');
 
         const constructInfo = this._getConstructInfo(scope);
         if (constructInfo.instance) {
@@ -184,7 +184,7 @@ export default abstract class ConstructFactory<
      * @returns Reference to the construct object.
      */
     async getConstruct(scope: Stack): Promise<TConstruct> {
-        _argValidator.checkObject(scope, 'Invalid scope (arg #1)');
+        argValidator.checkObject(scope, 'Invalid scope (arg #1)');
 
         return await this._getConstructInfo(scope).promise;
     }

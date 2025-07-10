@@ -1,18 +1,18 @@
-import _fs from 'fs';
-import _path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 
 import { Stack } from 'aws-cdk-lib';
 
-import { argValidator as _argValidator } from '@vamship/arg-utils';
-import { Promise } from 'bluebird';
+import { argValidator } from '@vamship/arg-utils';
+import { Promise } from 'bluebird'; // Bluebird might need to be replaced or handled if it causes issues with ESM/async
 
-import ConstructFactory from './construct-factory';
-import DirInfo from './dir-info';
+import ConstructFactory from './construct-factory.js';
+import DirInfo from './dir-info.js';
 
-import IConstructProps from './construct-props';
+import IConstructProps from './construct-props.js';
 
-function _loadModule(path: string): unknown {
-    const module = require(path); // eslint-disable-line @typescript-eslint/no-var-requires
+async function _loadModule(filePath: string): Promise<unknown> {
+    const module = await import(filePath);
     return module.default || module;
 }
 
@@ -33,7 +33,7 @@ export default class ConstructBuilder {
      *        construct definitions.
      */
     constructor(rootPath: string) {
-        _argValidator.checkString(rootPath, 1, 'Invalid rootPath (arg #1)');
+        argValidator.checkString(rootPath, 1, 'Invalid rootPath (arg #1)');
 
         this._rootPath = rootPath;
         this._factoryModules = undefined;
@@ -47,36 +47,42 @@ export default class ConstructBuilder {
      * @param dirInfo An object representing the directory that is
      *        currently being traversed.
      */
-    private static async _loadRecursive(directory: DirInfo): Promise<void> {
-        _argValidator.checkInstance(
+    private static async _loadRecursive(directory: DirInfo): Promise<any[]> {
+        argValidator.checkInstance(
             directory,
             DirInfo,
             'Invalid directory (arg #1)'
         );
-        const readdir = Promise.promisify(_fs.readdir.bind(_fs));
 
-        const files = await readdir(directory.absPath, {
+        const files = await fs.promises.readdir(directory.absPath, {
             withFileTypes: true,
         });
 
-        const results = await Promise.map(files, async (file) => {
+        const loadPromises = files.map(async (file) => {
             const { name } = file;
             if (file.isDirectory()) {
-                return await ConstructBuilder._loadRecursive(
+                return ConstructBuilder._loadRecursive(
                     directory.createChild(name)
                 );
-            } else if (file.isFile() && name.endsWith('.js')) {
-                const modulePath = _path.resolve(directory.absPath, name);
+            } else if (file.isFile() && (name.endsWith('.js') || name.endsWith('.mjs'))) { // Added .mjs
+                const modulePath = path.resolve(directory.absPath, name);
+                // The dynamic import path must be a relative or absolute path string.
+                // For Windows, ensure backslashes are converted to forward slashes for URL compatibility if needed,
+                // though `pathToFileURL` is more robust.
+                const moduleURL = path.pathToFileURL(modulePath).href;
                 return {
-                    construct: _loadModule(modulePath),
+                    construct: await _loadModule(moduleURL),
                     directory,
                 };
             }
-        })
-            .filter((item) => !!item)
-            .reduce((result, modules) => result.concat(modules), []);
+            return null; // Ensure all paths return a value for Promise.all
+        });
 
-        return results;
+        // Wait for all load promises to resolve
+        const resultsWithNulls = await Promise.all(loadPromises);
+
+        // Flatten and filter out nulls
+        return resultsWithNulls.flat().filter((item) => !!item);
     }
 
     /**
@@ -88,7 +94,7 @@ export default class ConstructBuilder {
      *        down to the init/config operations.
      */
     async build(scope: Stack, props: IConstructProps): Promise<void> {
-        _argValidator.checkObject(scope, 'Invalid scope (arg #1)');
+        argValidator.checkObject(scope, 'Invalid scope (arg #1)');
         props = Object.assign({}, props);
 
         const modules = await ConstructBuilder._loadRecursive(
@@ -99,8 +105,9 @@ export default class ConstructBuilder {
             ({ construct }) => construct instanceof ConstructFactory
         );
 
-        return Promise.map(this._factoryModules, ({ construct }) =>
+        const initPromises = this._factoryModules.map(({ construct }) =>
             construct.init(scope, props)
         );
+        await Promise.all(initPromises);
     }
 }

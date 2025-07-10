@@ -1,5 +1,5 @@
-import _path from 'path';
-import { argValidator as _argValidator } from '@vamship/arg-utils';
+import path from 'node:path';
+import { argValidator } from '@vamship/arg-utils';
 
 /**
  * Class that represents a directory in a construct hierarchy. Exposes methods
@@ -16,16 +16,16 @@ export default class DirInfo {
     /**
      * @param path The path to the directory.
      */
-    constructor(path: string) {
-        _argValidator.checkString(path, 1, 'Invalid path (arg #1)');
+    constructor(filePath: string) { // Renamed path to filePath to avoid conflict with 'path' module
+        argValidator.checkString(filePath, 1, 'Invalid filePath (arg #1)');
 
-        const parsedPath = _path.parse(_path.normalize(path));
+        const parsedPath = path.parse(path.normalize(filePath));
         this._name = parsedPath.base;
-        this._path = _path.join(parsedPath.dir, parsedPath.base);
-        this._absPath = _path.resolve(path);
-        this._parentPath = _path.resolve(parsedPath.dir);
+        this._path = path.join(parsedPath.dir, parsedPath.base);
+        this._absPath = path.resolve(filePath);
+        this._parentPath = path.resolve(parsedPath.dir);
 
-        this._absPathTokens = this._absPath.split(_path.sep);
+        this._absPathTokens = this._absPath.split(path.sep);
     }
 
     /**
@@ -76,9 +76,9 @@ export default class DirInfo {
      * @return The calculated relative path.
      */
     public getApiRoutePath(basePath: string): string {
-        _argValidator.checkString(basePath, 1, 'Invalid basePath (arg #1)');
+        argValidator.checkString(basePath, 1, 'Invalid basePath (arg #1)');
 
-        const basePathTokens = _path.resolve(basePath).split(_path.sep);
+        const basePathTokens = path.resolve(basePath).split(path.sep);
 
         if (basePathTokens.length > this._absPathTokens.length) {
             throw new Error('Base has more levels than the directory path');
@@ -103,8 +103,8 @@ export default class DirInfo {
      * @return {Object} An object that represents the child directory.
      */
     public createChild(name: string): DirInfo {
-        _argValidator.checkString(name, 1, 'Invalid name (arg #1)');
+        argValidator.checkString(name, 1, 'Invalid name (arg #1)');
 
-        return new DirInfo(_path.join(this.path, name));
+        return new DirInfo(path.join(this.path, name));
     }
 }

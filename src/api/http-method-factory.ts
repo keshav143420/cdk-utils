@@ -1,5 +1,5 @@
-import _path from 'path';
-import _crypto from 'crypto';
+import path from 'node:path';
+import crypto from 'node:crypto';
 
 import {
     AuthorizationType,
@@ -22,13 +22,13 @@ import {
 import { Role } from 'aws-cdk-lib/aws-iam';
 import { IFunction } from 'aws-cdk-lib/aws-lambda';
 import { Arn, ArnFormat, Stack } from 'aws-cdk-lib';
-import { argValidator as _argValidator } from '@vamship/arg-utils';
+import { argValidator } from '@vamship/arg-utils';
 import { Promise } from 'bluebird';
 
-import ConstructFactory from '../construct-factory';
-import IConstructProps from '../construct-props';
-import IHttpMethodFactoryOptions from './http-method-factory-options';
-import IRequestParams from './request-params';
+import ConstructFactory from '../construct-factory.js';
+import IConstructProps from '../construct-props.js';
+import IHttpMethodFactoryOptions from './http-method-factory-options.js';
+import IRequestParams from './request-params.js';
 
 const RESPONSE_TEMPLATE_ERROR = {
     'application/json': `{
@@ -69,14 +69,14 @@ export default class HttpMethodFactory extends ConstructFactory<Method> {
             enableCors: true,
         }
     ) {
-        _argValidator.checkString(filePath, 1, 'Invalid filePath (arg #1)');
+        argValidator.checkString(filePath, 1, 'Invalid filePath (arg #1)');
 
         // NOTE: The id that we passing the absolute file path as the id
         // of the construct. This is not the greatest idea, because it ties
         // the CDK script to the path on a local laptop.
         // We are mitigating this issue by ignoring this id, and using the
         // relative path to the method in the _init() method.
-        const id = `id${_crypto
+        const id = `id${crypto
             .createHash('md5')
             .update(filePath)
             .digest('hex')}`;
@@ -108,7 +108,7 @@ export default class HttpMethodFactory extends ConstructFactory<Method> {
         // NOTE: We're overriding the id using the relative path of the method,
         // and the http verb.
         const idString = `${this.httpMethod}:${requestPath}`;
-        const id = `id${_crypto
+        const id = `id${crypto
             .createHash('md5')
             .update(idString)
             .digest('hex')}`;
@@ -137,7 +137,7 @@ export default class HttpMethodFactory extends ConstructFactory<Method> {
      * This property can be overridden by child classes.
      */
     protected get httpMethod(): string {
-        const { base } = _path.parse(this.filePath);
+        const { base } = path.parse(this.filePath);
         return base.replace(/\.js$/, '').toUpperCase();
     }
 
@@ -180,14 +180,14 @@ export default class HttpMethodFactory extends ConstructFactory<Method> {
      * @return The request path for the http API
      */
     protected getRequestPath(apiRootDir: string): string {
-        _argValidator.checkString(apiRootDir, 1, 'Invalid apiRootDir (arg #1)');
+        argValidator.checkString(apiRootDir, 1, 'Invalid apiRootDir (arg #1)');
 
-        const { dir } = _path.parse(this.filePath);
+        const { dir } = path.parse(this.filePath);
 
         const requestPath =
-            _path
+            path
                 .relative(apiRootDir, dir)
-                .split(_path.sep)
+                .split(path.sep)
                 .map((token) => {
                     if (token.startsWith('_')) {
                         token = `{${token.replace(/_/, '')}}`;
@@ -211,7 +211,7 @@ export default class HttpMethodFactory extends ConstructFactory<Method> {
      * @returns A map of request parameters.
      */
     protected getRequestParameters(requestPath: string): IRequestParams {
-        _argValidator.checkString(
+        argValidator.checkString(
             requestPath,
             1,
             'Invalid requestPath (arg #1)'
@@ -344,7 +344,7 @@ export default class HttpMethodFactory extends ConstructFactory<Method> {
     protected async getMethodResponses(
         scope: Stack
     ): Promise<MethodResponse[]> {
-        _argValidator.checkObject(scope, 'Invalid scope (arg #1)');
+        argValidator.checkObject(scope, 'Invalid scope (arg #1)');
 
         const responseParameters = {};
         Object.keys(this.responseHeaders).forEach((header) => {
@@ -389,7 +389,7 @@ export default class HttpMethodFactory extends ConstructFactory<Method> {
     protected async getIntegrationResponses(
         scope: Stack
     ): Promise<IntegrationResponse[]> {
-        _argValidator.checkObject(scope, 'Invalid scope (arg #1)');
+        argValidator.checkObject(scope, 'Invalid scope (arg #1)');
 
         const responseParameters = Object.keys(this.responseHeaders).reduce(
             (result, header) => {
@@ -477,8 +477,8 @@ export default class HttpMethodFactory extends ConstructFactory<Method> {
         scope: Stack,
         requestPath: string
     ): Promise<MethodOptions> {
-        _argValidator.checkObject(scope, 'Invalid scope (arg #1)');
-        _argValidator.checkString(
+        argValidator.checkObject(scope, 'Invalid scope (arg #1)');
+        argValidator.checkString(
             requestPath,
             1,
             'Invalid requestPath (arg #2)'
@@ -524,7 +524,7 @@ export default class HttpMethodFactory extends ConstructFactory<Method> {
     protected async buildLambdaIntegrationOptions(
         scope: Stack
     ): Promise<LambdaIntegrationOptions> {
-        _argValidator.checkObject(scope, 'Invalid scope (arg #1)');
+        argValidator.checkObject(scope, 'Invalid scope (arg #1)');
 
         return {
             allowTestInvoke: true,
@@ -550,7 +550,7 @@ export default class HttpMethodFactory extends ConstructFactory<Method> {
     protected async buildMockIntegrationOptions(
         scope: Stack
     ): Promise<IntegrationOptions> {
-        _argValidator.checkObject(scope, 'Invalid scope (arg #1)');
+        argValidator.checkObject(scope, 'Invalid scope (arg #1)');
 
         return {
             passthroughBehavior: PassthroughBehavior.NEVER,
@@ -572,7 +572,7 @@ export default class HttpMethodFactory extends ConstructFactory<Method> {
      * @returns An array of method responses.
      */
     protected async buildIntegration(scope: Stack): Promise<Integration> {
-        _argValidator.checkObject(scope, 'Invalid scope (arg #1)');
+        argValidator.checkObject(scope, 'Invalid scope (arg #1)');
 
         const handler = await this.getLambdaHandler(scope);
 

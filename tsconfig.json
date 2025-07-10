@@ -1,11 +1,12 @@
 {
   "compilerOptions": {
-    "target": "ES2018",
-    "module": "commonjs",
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "NodeNext",
     "declaration": true,
     "sourceMap": true,
-    "outDir": "./working",
-    "rootDir": "./",
+    "outDir": "./dist",
+    "rootDir": "./src", // Typically rootDir is src if outDir is dist
 
     /* Strict Type-Checking Options */
     "strictNullChecks": true,
@@ -15,7 +16,7 @@
     "alwaysStrict": true,
 
     /* Additional Checks */
-    "esModuleInterop": true
+    "esModuleInterop": true // Recommended to keep true for interop with CJS dependencies
   },
   "include": [ "src/**/*.ts", "test/**/*.ts" ]
 }

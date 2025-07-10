@@ -2,7 +2,12 @@
     "name": "@vamship/cdk-utils",
     "version": "2.0.1",
     "description": "A library of utilities that will allow CDK projects to be composed from modular files",
-    "main": "src/index.js",
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "engines": {
+        "node": ">=20.0.0"
+    },
     "scripts": {
         "all": "gulp --series format lint build test-unit clean",
         "test": "gulp test-unit"
@@ -11,7 +16,7 @@
         "package.json",
         "LICENSE",
         "README.md",
-        "src/**/*"
+        "dist/"
     ],
     "keywords": [
         "CDK",
@@ -20,32 +25,30 @@
     "author": "Vamshi K Ponnapalli <vamshi.ponnapalli@gmail.com>",
     "license": "MIT",
     "devDependencies": {
-        "@types/mocha": "^10.0.1",
-        "@types/node": "^18.11.19",
-        "@vamship/build-utils": "1.1.0",
-        "@vamship/test-utils": "^2.5.8",
-        "aws-cdk-lib": "^2.63.2",
-        "aws-sdk": "^2.1310.0",
-        "chai": "^4.3.7",
-        "chai-as-promised": "^7.1.1",
-        "constructs": "^10.1.243",
-        "rewire": "^6.0.0",
-        "sinon": "^15.0.1",
-        "sinon-chai": "^3.7.0",
-        "typedoc": "^0.23.24"
+        "@types/mocha": "^10.0.10",
+        "@types/node": "^24.0.12",
+        "@vamship/build-utils": "^2.5.1",
+        "@vamship/test-utils": "^3.1.1",
+        "aws-sdk": "^2.1692.0",
+        "chai": "^5.2.1",
+        "chai-as-promised": "^8.0.1",
+        "esmock": "^2.6.4",
+        "sinon": "^21.0.0",
+        "sinon-chai": "^4.0.0",
+        "typedoc": "^0.28.7"
     },
     "dependencies": {
-        "@vamship/arg-utils": "^2.4.19",
-        "@vamship/error-types": "^1.8.0",
-        "ajv": "^8.12.0",
-        "aws-cdk-lib": "^2.63.2",
+        "@vamship/arg-utils": "^3.0.3",
+        "@vamship/error-types": "^2.0.1",
+        "ajv": "^8.17.1",
+        "aws-cdk-lib": "^2.204.0",
         "bluebird": "^3.7.2",
-        "constructs": "^10.1.243"
+        "constructs": "^10.4.2"
     },
     "peerDependencies": {
-        "aws-cdk-lib": "^2.63.2",
-        "aws-sdk": "^2.1059.0",
-        "constructs": "^10.1.243"
+        "aws-cdk-lib": "^2.204.0",
+        "aws-sdk": "^2.1692.0",
+        "constructs": "^10.4.2"
     },
     "repository": {
         "type": "git",

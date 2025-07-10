@@ -1,4 +1,4 @@
-import { argValidator as _argValidator } from '@vamship/arg-utils';
+import { argValidator } from '@vamship/arg-utils';
 import { config as awsConfig, KMS, SharedIniFileCredentials } from 'aws-sdk';
 import { Promise } from 'bluebird';
 
@@ -15,8 +15,8 @@ export default class SecretManager {
      *        KMS API.
      */
     constructor(keyId: string, profile = process.env.AWS_PROFILE) {
-        _argValidator.checkString(keyId, 1, 'Invalid keyId (arg #1)');
-        _argValidator.checkString(profile, 1, 'Invalid profile (arg #2)');
+        argValidator.checkString(keyId, 1, 'Invalid keyId (arg #1)');
+        argValidator.checkString(profile, 1, 'Invalid profile (arg #2)');
 
         this._keyId = keyId;
         this._profile = profile as string;
@@ -34,8 +34,8 @@ export default class SecretManager {
         alias: string,
         profile = process.env.AWS_PROFILE
     ): Promise<SecretManager> {
-        _argValidator.checkString(alias, 1, 'Invalid alias (arg #1)');
-        _argValidator.checkString(profile, 1, 'Invalid profile (arg #2)');
+        argValidator.checkString(alias, 1, 'Invalid alias (arg #1)');
+        argValidator.checkString(profile, 1, 'Invalid profile (arg #2)');
 
         alias = `alias/${alias}`;
 
@@ -72,7 +72,7 @@ export default class SecretManager {
      * @returns An encrypted string using the key associated with this class.
      */
     public async encrypt(plaintext: string): Promise<string> {
-        _argValidator.checkString(plaintext, 1, 'Invalid plaintext (arg #1)');
+        argValidator.checkString(plaintext, 1, 'Invalid plaintext (arg #1)');
 
         awsConfig.credentials = new SharedIniFileCredentials({
             profile: this._profile,

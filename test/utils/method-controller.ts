@@ -1,4 +1,4 @@
-import { asyncHelper as _asyncHelper } from '@vamship/test-utils';
+import { asyncHelper } from '@vamship/test-utils';
 
 /**
  * A mapping of step names to the step number.
@@ -71,7 +71,7 @@ export default class MethodController {
 
         while (index < step && !result.done) {
             result = iterator.next();
-            await _asyncHelper.wait(1)();
+            await asyncHelper.wait(1)();
             index++;
         }
 
@@ -79,4 +79,4 @@ export default class MethodController {
     }
 }
 
-module.exports = MethodController;
+// module.exports = MethodController; // Replaced with export default above class

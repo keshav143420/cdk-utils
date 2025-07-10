@@ -1,19 +1,19 @@
 import 'mocha';
-import _chai, { expect } from 'chai';
-import _sinon from 'sinon';
-import _sinonChai from 'sinon-chai';
-import _chaiAsPromised from 'chai-as-promised';
+import chai, { expect } from 'chai';
+import sinon from 'sinon';
+import sinonChai from 'sinon-chai';
+import chaiAsPromised from 'chai-as-promised';
 
-_chai.use(_sinonChai);
-_chai.use(_chaiAsPromised);
+chai.use(sinonChai);
+chai.use(chaiAsPromised);
 
 import { Construct } from 'constructs';
 import { Stack, App } from 'aws-cdk-lib';
-import { testValues as _testValues } from '@vamship/test-utils';
-import { Promise } from 'bluebird';
+import { testValues } from '@vamship/test-utils';
+import { Promise } from 'bluebird'; // Keep for now
 
-import ConstructFactory from '../../src/construct-factory';
-import IConstructProps from '../../src/construct-props';
+import ConstructFactory from '../../dist/construct-factory.js'; // Updated path
+import IConstructProps from '../../dist/construct-props.js'; // Updated path
 
 describe('ConstructFactory', () => {
     class MockConstructFactory extends ConstructFactory<Construct> {
@@ -57,13 +57,13 @@ describe('ConstructFactory', () => {
     }
 
     function _createInstance(
-        id = _testValues.getString('id')
+        id = testValues.getString('id')
     ): MockConstructFactory {
         return new MockConstructFactory(id);
     }
 
     function _createScope(
-        stackName = _testValues.getString('stackName')
+        stackName = testValues.getString('stackName')
     ): Stack {
         return {
             stackName,
@@ -77,7 +77,7 @@ describe('ConstructFactory', () => {
 
     describe('ctor()', () => {
         it('should throw an error if invoked without a valid id', () => {
-            const inputs = _testValues.allButString('');
+            const inputs = testValues.allButString('');
             const error = 'Invalid id (arg #1)';
 
             inputs.forEach((id) => {
@@ -89,7 +89,7 @@ describe('ConstructFactory', () => {
         });
 
         it('should return an object with the expected methods and properties', () => {
-            const id = _testValues.getString('id');
+            const id = testValues.getString('id');
             const factory = new MockConstructFactory(id);
 
             expect(factory).to.be.an('object');
@@ -103,10 +103,10 @@ describe('ConstructFactory', () => {
 
     describe('init()', () => {
         it('should throw an error if invoked without a valid scope', async () => {
-            const inputs = _testValues.allButObject();
+            const inputs = testValues.allButObject();
             const error = 'Invalid scope (arg #1)';
 
-            const result = Promise.map(inputs, (scope) => {
+            const promises = inputs.map(async (scope) => {
                 const factory = _createInstance();
                 const props = _createProps();
 
@@ -114,14 +114,14 @@ describe('ConstructFactory', () => {
                 return expect(ret).to.be.rejectedWith(error);
             });
 
-            await expect(result).to.have.been.fulfilled;
+            await Promise.all(promises);
         });
 
         it('should throw an error if invoked without valid props', async () => {
-            const inputs = _testValues.allButObject();
+            const inputs = testValues.allButObject();
             const error = 'Invalid props (arg #2)';
 
-            const result = Promise.map(inputs, (props) => {
+            const promises = inputs.map(async (props) => {
                 const factory = _createInstance();
                 const scope = _createScope();
 
@@ -129,7 +129,7 @@ describe('ConstructFactory', () => {
                 return expect(ret).to.be.rejectedWith(error);
             });
 
-            await expect(result).to.have.been.fulfilled;
+            await Promise.all(promises);
         });
 
         it('should throw an error if a construct for the specific scope has already been created', async () => {
@@ -151,13 +151,13 @@ describe('ConstructFactory', () => {
         });
 
         it('should invoke the protected init method to create a new instance', () => {
-            const id = _testValues.getString('id');
+            const id = testValues.getString('id');
             const stackName = 'my_stack_1';
             const scope = _createScope(stackName);
             const props = _createProps();
 
             const factory = _createInstance(id);
-            const initMock = _sinon.stub(factory, '_init');
+            const initMock = sinon.stub(factory, '_init');
 
             expect(initMock).to.not.have.been.called;
 
@@ -206,17 +206,17 @@ describe('ConstructFactory', () => {
 
     describe('getConstruct()', () => {
         it('should throw an error if invoked without a valid scope', async () => {
-            const inputs = _testValues.allButObject();
+            const inputs = testValues.allButObject();
             const error = 'Invalid scope (arg #1)';
 
-            const result = Promise.map(inputs, (scope) => {
+            const promises = inputs.map(async (scope) => {
                 const factory = _createInstance();
 
                 const ret = factory.getConstruct(scope);
                 return expect(ret).to.be.rejectedWith(error);
             });
 
-            return expect(result).to.have.been.fulfilled;
+            await Promise.all(promises);
         });
 
         it('should return a reference to the construct after the init promise has been resolved', async () => {
