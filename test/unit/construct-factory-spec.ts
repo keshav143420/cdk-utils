@@ -1,34 +1,32 @@
+/* eslint-disable tsel/no-unused-expressions */
 import 'mocha';
-import _chai, { expect } from 'chai';
+import { expect, use as _useWithChai } from 'chai';
 import _sinon from 'sinon';
 import _sinonChai from 'sinon-chai';
 import _chaiAsPromised from 'chai-as-promised';
 
-_chai.use(_sinonChai);
-_chai.use(_chaiAsPromised);
+_useWithChai(_sinonChai);
+_useWithChai(_chaiAsPromised);
 
 import { Construct } from 'constructs';
 import { Stack, App } from 'aws-cdk-lib';
 import { testValues as _testValues } from '@vamship/test-utils';
-import { Promise } from 'bluebird';
+import Promise from 'bluebird';
 
-import ConstructFactory from '../../src/construct-factory';
-import IConstructProps from '../../src/construct-props';
+import ConstructFactory from '../../src/construct-factory.js';
+import IConstructProps from '../../src/construct-props.js';
 
 describe('ConstructFactory', () => {
     class MockConstructFactory extends ConstructFactory<Construct> {
         private _initResolve?: (construct: Construct) => void;
         private _initReject?: (error: Error | string) => void;
 
-        protected async _init(
-            scope: Stack,
-            props: IConstructProps
-        ): Promise<Construct> {
+        protected async _init(scope: Stack, props: IConstructProps) {
             const construct = await new Promise<Construct>(
                 (resolve, reject) => {
                     this._initResolve = resolve;
                     this._initReject = reject;
-                }
+                },
             );
             return construct as Construct;
         }
@@ -57,13 +55,13 @@ describe('ConstructFactory', () => {
     }
 
     function _createInstance(
-        id = _testValues.getString('id')
+        id = _testValues.getString('id'),
     ): MockConstructFactory {
         return new MockConstructFactory(id);
     }
 
     function _createScope(
-        stackName = _testValues.getString('stackName')
+        stackName = _testValues.getString('stackName'),
     ): Stack {
         return {
             stackName,
@@ -82,7 +80,7 @@ describe('ConstructFactory', () => {
 
             inputs.forEach((id) => {
                 const wrapper = (): MockConstructFactory =>
-                    new MockConstructFactory(id);
+                    new MockConstructFactory(id as string);
 
                 expect(wrapper).to.throw(error);
             });
@@ -110,7 +108,7 @@ describe('ConstructFactory', () => {
                 const factory = _createInstance();
                 const props = _createProps();
 
-                const ret = factory.init(scope, props);
+                const ret = factory.init(scope as unknown as Stack, props);
                 return expect(ret).to.be.rejectedWith(error);
             });
 
@@ -125,7 +123,7 @@ describe('ConstructFactory', () => {
                 const factory = _createInstance();
                 const scope = _createScope();
 
-                const ret = factory.init(scope, props);
+                const ret = factory.init(scope, props as IConstructProps);
                 return expect(ret).to.be.rejectedWith(error);
             });
 
@@ -157,7 +155,8 @@ describe('ConstructFactory', () => {
             const props = _createProps();
 
             const factory = _createInstance(id);
-            const initMock = _sinon.stub(factory, '_init');
+            // eslint-disable-next-line tsel/no-explicit-any
+            const initMock = _sinon.stub(factory, '_init' as any);
 
             expect(initMock).to.not.have.been.called;
 
@@ -212,7 +211,7 @@ describe('ConstructFactory', () => {
             const result = Promise.map(inputs, (scope) => {
                 const factory = _createInstance();
 
-                const ret = factory.getConstruct(scope);
+                const ret = factory.getConstruct(scope as unknown as Stack);
                 return expect(ret).to.be.rejectedWith(error);
             });
 

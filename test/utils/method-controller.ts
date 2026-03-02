@@ -32,10 +32,11 @@ export default class MethodController {
      */
     constructor(
         steps: ISteps,
-        resolver: (step: number) => IterableIterator<unknown>
+        resolver: (step: number) => IterableIterator<unknown>,
     ) {
         Object.keys(steps).forEach((key) => {
-            this[key] = steps[key];
+            // eslint-disable-next-line tsel/no-explicit-any
+            (this as any)[key] = steps[key];
         });
         this._resolver = resolver;
         this._steps = steps;
@@ -61,7 +62,7 @@ export default class MethodController {
      * @return A promise that represents execution until the specified
      *         step.
      */
-    public async resolveUntil(step: number, iteration = 0): Promise<unknown> {
+    public async resolveUntil(step: number, iteration = 0) {
         let index = 0;
         let result = { value: undefined, done: false } as IteratorResult<
             unknown,
@@ -78,5 +79,3 @@ export default class MethodController {
         return result.value;
     }
 }
-
-module.exports = MethodController;

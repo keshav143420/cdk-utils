@@ -14,7 +14,7 @@ const envUtils = {
         if (!value) {
             if (!hasDefault) {
                 throw new Error(
-                    `Cannot build stack. Environment variable not set: ${envVar}`
+                    `Cannot build stack. Environment variable not set: ${envVar}`,
                 );
             }
             return defaultValue as string;
@@ -37,12 +37,12 @@ const envUtils = {
         const hasDefault = typeof defaultValue === 'number';
 
         const value = parseInt(
-            envUtils.getString(envVar, hasDefault ? '' : undefined)
+            envUtils.getString(envVar, hasDefault ? '' : undefined),
         );
         if (isNaN(value)) {
             if (!hasDefault) {
                 throw new Error(
-                    `Environment variable is not a number: ${envVar}`
+                    `Environment variable is not a number: ${envVar}`,
                 );
             }
             return defaultValue as number;

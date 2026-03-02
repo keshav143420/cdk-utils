@@ -1,45 +1,68 @@
+/* eslint-disable tsel/no-unused-expressions */
+/* eslint-disable tsel/no-unused-vars */
+/* eslint-disable tsel/no-explicit-any */
 import 'mocha';
-import _chai, { expect } from 'chai';
+import { expect, use as _useWithChai } from 'chai';
 import _sinon from 'sinon';
 import _sinonChai from 'sinon-chai';
 import _chaiAsPromised from 'chai-as-promised';
 
-_chai.use(_sinonChai);
-_chai.use(_chaiAsPromised);
+_useWithChai(_sinonChai);
+_useWithChai(_chaiAsPromised);
 
 import { Construct } from 'constructs';
 import { Stack } from 'aws-cdk-lib';
 import {
     asyncHelper as _asyncHelper,
-    ObjectMock,
     testValues as _testValues,
 } from '@vamship/test-utils';
-import { Promise } from 'bluebird';
+import Promise from 'bluebird';
 import _path from 'path';
-import _rewire from 'rewire';
+import _esmock from 'esmock';
 
-import MethodController from '../utils/method-controller';
-import DirInfo from '../../src/dir-info';
-import ConstructFactory from '../../src/construct-factory';
-import IConstructProps from '../../src/construct-props';
-
-const ConstructBuilderModule = _rewire('../../src/construct-builder');
-const ConstructBuilder = ConstructBuilderModule.default;
-type ConstructBuilderType = typeof ConstructBuilder;
+import DirInfo from '../../src/dir-info.js';
+import ConstructFactory from '../../src/construct-factory.js';
+import IConstructProps from '../../src/construct-props.js';
 
 describe('ConstructBuilder', () => {
     class MockConstructFactory extends ConstructFactory<Construct> {
-        protected async _init(
-            scope: Stack,
-            props: IConstructProps
-        ): Promise<Construct> {
+        protected async _init(scope: Stack, props: IConstructProps) {
             return {} as Construct;
         }
     }
 
-    function _createInstance(
-        rootPath = _testValues.getString('rootPath')
-    ): ConstructBuilderType {
+    let ConstructBuilder: any;
+    let _readdirStub: any;
+    let _loadModuleStub: any;
+    let _readdirData: any[];
+    let _readdirCallIndex: number;
+
+    async function _import() {
+        _readdirCallIndex = 0;
+        _readdirData = [[]];
+
+        _readdirStub = _sinon.stub().callsFake(() => {
+            const data = _readdirData[_readdirCallIndex];
+            _readdirCallIndex++;
+            return Promise.resolve(data);
+        });
+
+        _loadModuleStub = _sinon.stub().resolves({});
+
+        const ConstructBuilderModule = await _esmock(
+            '../../src/construct-builder.js',
+            {
+                'fs/promises': { readdir: _readdirStub },
+            },
+        );
+
+        ConstructBuilder = ConstructBuilderModule.default;
+
+        // Stub the static _loadModule method
+        _sinon.stub(ConstructBuilder, '_loadModule').callsFake(_loadModuleStub);
+    }
+
+    function _createInstance(rootPath = _testValues.getString('rootPath')) {
         return new ConstructBuilder(rootPath);
     }
 
@@ -56,40 +79,13 @@ describe('ConstructBuilder', () => {
             }));
     }
 
-    let _fsMock;
-    let _loadModuleStub;
-    const _loadRecursiveCtrl = new MethodController(
-        {
-            READ_DIR: 0,
-            END: 1,
-        },
-        function* resolver(iteration) {
-            const readdirMethod = _fsMock.mocks.readdir;
+    beforeEach(async () => {
+        await _import();
+    });
 
-            const callback = readdirMethod.stub.args[iteration][2];
-            yield callback(null, _fsMock.__dirData[iteration]);
-        }
-    );
-
-    beforeEach(() => {
-        _fsMock = new ObjectMock()
-            .addMock('readdir')
-            .addMock('readdirSync', () => {
-                const data = _fsMock.__dirData[_fsMock.__callIndex];
-                _fsMock.__callIndex++;
-
-                return data;
-            });
-        _fsMock.__callIndex = 0;
-        _fsMock.__dirData = [[]];
-
-        ConstructBuilderModule.__set__('fs_1', {
-            default: _fsMock.instance,
-        });
-
-        _loadModuleStub = _sinon.stub();
-
-        ConstructBuilderModule.__set__('_loadModule', _loadModuleStub);
+    afterEach(() => {
+        _esmock.purge(ConstructBuilder);
+        _sinon.restore();
     });
 
     describe('[static]', () => {
@@ -101,7 +97,7 @@ describe('ConstructBuilder', () => {
 
         function _createDirInfo(
             name = _testValues.getString('name'),
-            path = _testValues.getString('path')
+            path = _testValues.getString('path'),
         ): DirInfo {
             return new DirInfo(name);
         }
@@ -138,7 +134,7 @@ describe('ConstructBuilder', () => {
                 | string
                 | ((item: string, index: number) => string)
                 | undefined,
-            count = 3
+            count = 3,
         ): string[] {
             if (typeof callback === 'string') {
                 const extension = callback;
@@ -160,7 +156,7 @@ describe('ConstructBuilder', () => {
                 const inputs = _testValues.allButObject({});
                 const error = 'Invalid directory (arg #1)';
 
-                return Promise.map(inputs, (directory) => {
+                return Promise.map(inputs, (directory: any) => {
                     const ret = ConstructBuilder._loadRecursive(directory);
 
                     return expect(ret).to.have.been.rejectedWith(error);
@@ -168,109 +164,86 @@ describe('ConstructBuilder', () => {
             });
 
             it('should read the contents of the specified directory', async () => {
-                const readdirMethod = _fsMock.mocks.readdir;
                 const dir = _createDirInfo();
 
-                expect(readdirMethod.stub).to.not.have.been.called;
+                expect(_readdirStub).to.not.have.been.called;
 
-                ConstructBuilder._loadRecursive(dir);
+                await ConstructBuilder._loadRecursive(dir);
 
-                await _loadRecursiveCtrl.resolveUntil(
-                    _loadRecursiveCtrl.steps.READ_DIR
-                );
-
-                expect(readdirMethod.stub).to.have.been.calledOnce;
-                expect(readdirMethod.stub.args[0]).to.have.length(3);
-                expect(readdirMethod.stub.args[0][0]).to.equal(dir.absPath);
-                expect(readdirMethod.stub.args[0][1]).to.deep.equal({
+                expect(_readdirStub).to.have.been.calledOnce;
+                expect(_readdirStub.args[0]).to.have.length(2);
+                expect(_readdirStub.args[0][0]).to.equal(dir.absPath);
+                expect(_readdirStub.args[0][1]).to.deep.equal({
                     withFileTypes: true,
                 });
             });
 
             it('should reject the promise if the directory read fails', async () => {
-                const readdirMethod = _fsMock.mocks.readdir;
                 const dir = _createDirInfo();
-                const error = 'something went wrong!';
+                const error = new Error('something went wrong!');
 
-                expect(readdirMethod.stub).to.not.have.been.called;
+                // Make the readdir stub reject for this test
+                _readdirStub.returns(Promise.reject(error));
 
                 const ret = ConstructBuilder._loadRecursive(dir);
-                await _loadRecursiveCtrl.resolveUntil(
-                    _loadRecursiveCtrl.steps.READ_DIR
-                );
-
-                const callback = readdirMethod.stub.args[0][2];
-                callback(error);
 
                 await expect(ret).to.be.rejectedWith(error);
             });
 
             it('should ignore any entity that is not a file or a directory', async () => {
-                const readdirMethod = _fsMock.mocks.readdir;
                 const dir = _createDirInfo();
                 const fileList = _buildFileList('.js', 5);
                 const dirList = _buildFileList(undefined, 5);
 
-                _fsMock.__dirData[0] = _createDirList(dirList, fileList).map(
+                _readdirData[0] = _createDirList(dirList, fileList).map(
                     (item) => {
                         return Object.assign(item, {
                             isDirectory: () => false,
                             isFile: () => false,
                         });
-                    }
+                    },
                 );
 
-                expect(readdirMethod.stub).to.not.have.been.called;
+                expect(_readdirStub).to.not.have.been.called;
                 expect(_loadModuleStub).to.not.have.been.called;
 
-                ConstructBuilder._loadRecursive(dir);
-                await _loadRecursiveCtrl.resolveUntil(
-                    _loadRecursiveCtrl.steps.END
-                );
+                await ConstructBuilder._loadRecursive(dir);
 
-                expect(readdirMethod.stub).to.have.been.calledOnce;
+                expect(_readdirStub).to.have.been.calledOnce;
                 expect(_loadModuleStub).to.not.have.been.called;
             });
 
             it('should ignore any entity that does not have a .js extension', async () => {
-                const readdirMethod = _fsMock.mocks.readdir;
                 const dir = _createDirInfo();
                 const fileList = _buildFileList('java', 5);
-                const dirList = [];
+                const dirList: string[] = [];
 
-                _fsMock.__dirData[0] = _createDirList(dirList, fileList);
+                _readdirData[0] = _createDirList(dirList, fileList);
 
-                expect(readdirMethod.stub).to.not.have.been.called;
+                expect(_readdirStub).to.not.have.been.called;
                 expect(_loadModuleStub).to.not.have.been.called;
 
-                ConstructBuilder._loadRecursive(dir);
-                await _loadRecursiveCtrl.resolveUntil(
-                    _loadRecursiveCtrl.steps.END
-                );
+                await ConstructBuilder._loadRecursive(dir);
 
                 // No recursive calls to readdir because there are no child dirs
-                expect(readdirMethod.stub).to.have.been.calledOnce;
+                expect(_readdirStub).to.have.been.calledOnce;
                 expect(_loadModuleStub).to.not.have.been.called;
             });
 
             it('should load (require) each entity that has a .js extension', async () => {
-                const readdirMethod = _fsMock.mocks.readdir;
                 const dir = _createDirInfo();
                 const fileList = _buildFileList('js', 5);
-                const dirList = [];
+                const dirList: string[] = [];
 
-                _fsMock.__dirData[0] = _createDirList(dirList, fileList);
+                _readdirData[0] = _createDirList(dirList, fileList);
 
-                expect(readdirMethod.stub).to.not.have.been.called;
+                expect(_readdirStub).to.not.have.been.called;
                 expect(_loadModuleStub).to.not.have.been.called;
 
-                ConstructBuilder._loadRecursive(dir);
-                await _loadRecursiveCtrl
-                    .resolveUntil(_loadRecursiveCtrl.steps.END)
-                    .then(_asyncHelper.wait(10));
+                await ConstructBuilder._loadRecursive(dir);
 
                 // No recursive calls to readdir because there are no child dirs
-                expect(readdirMethod.stub).to.have.been.calledOnce;
+                expect(_readdirStub).to.have.been.calledOnce;
 
                 expect(_loadModuleStub).to.have.been.called;
                 expect(_loadModuleStub.callCount).to.equal(fileList.length);
@@ -285,51 +258,42 @@ describe('ConstructBuilder', () => {
             it('should reject the promise if any of the load operations fails', async () => {
                 const dir = _createDirInfo();
                 const fileList = _buildFileList('js', 5);
-                const dirList = [];
+                const dirList: string[] = [];
                 const error = new Error('something went wrong!');
 
-                _fsMock.__dirData[0] = _createDirList(dirList, fileList);
-                _loadModuleStub.throws(error);
+                _readdirData[0] = _createDirList(dirList, fileList);
+                _loadModuleStub.rejects(error);
 
                 const ret = ConstructBuilder._loadRecursive(dir);
-                try {
-                    await _loadRecursiveCtrl.resolveUntil(
-                        _loadRecursiveCtrl.steps.END
-                    );
-                } catch (ex) {
-                    // Eat exception.
-                }
 
                 await expect(ret).to.be.rejectedWith(error);
             });
 
             it('should recursively load data from every directory in the list', async () => {
                 const dir = _createDirInfo();
-                const fileList = [];
+                const fileList: string[] = [];
                 const dirList = _buildFileList(undefined, 5);
 
-                _fsMock.__dirData[0] = _createDirList(dirList, fileList);
+                _readdirData[0] = _createDirList(dirList, fileList);
+                // Add empty data for subdirectories
+                dirList.forEach(() => _readdirData.push([]));
 
-                ConstructBuilder._loadRecursive(dir);
-                const loadRecursiveStub = _sinon.stub(
+                const loadRecursiveSpy = _sinon.spy(
                     ConstructBuilder,
-                    '_loadRecursive'
+                    '_loadRecursive',
                 );
 
                 try {
-                    expect(loadRecursiveStub).to.not.have.been.called;
+                    await ConstructBuilder._loadRecursive(dir);
 
-                    await _loadRecursiveCtrl.resolveUntil(
-                        _loadRecursiveCtrl.steps.END
+                    // Should be called once for the root dir + once for each subdir
+                    expect(loadRecursiveSpy.callCount).to.equal(
+                        dirList.length + 1,
                     );
 
-                    expect(loadRecursiveStub).to.have.been.called;
-                    expect(loadRecursiveStub.callCount).to.equal(
-                        dirList.length
-                    );
-
+                    // Check the calls for subdirectories (skip first call which is the root)
                     dirList.forEach((dirName, index) => {
-                        const args = loadRecursiveStub.args[index];
+                        const args = loadRecursiveSpy.args[index + 1];
                         const child = dir.createChild(dirName);
 
                         expect(args).to.have.length(1);
@@ -337,36 +301,24 @@ describe('ConstructBuilder', () => {
                         expect(args[0].absPath).to.equal(child.absPath);
                     });
                 } finally {
-                    loadRecursiveStub.restore();
+                    loadRecursiveSpy.restore();
                 }
             });
 
             it('should reject the promise if the recursive load call fails', async () => {
                 const dir = _createDirInfo();
-                const fileList = [];
-                const dirList = _buildFileList(undefined, 5);
+                const fileList: string[] = [];
+                const dirList = _buildFileList(undefined, 1); // Use just 1 dir to make test simpler
                 const error = new Error('something went wrong!');
 
-                _fsMock.__dirData[0] = _createDirList(dirList, fileList);
+                _readdirData[0] = _createDirList(dirList, fileList);
+
+                // Make readdir fail on the second call (for the subdirectory)
+                _readdirStub.onSecondCall().rejects(error);
 
                 const ret = ConstructBuilder._loadRecursive(dir);
-                const loadRecursiveStub = _sinon.stub(
-                    ConstructBuilder,
-                    '_loadRecursive'
-                );
 
-                try {
-                    loadRecursiveStub.throws(error);
-
-                    await _loadRecursiveCtrl
-                        .resolveUntil(_loadRecursiveCtrl.steps.END)
-                        .catch((ex) => {
-                            /* Do nothing */
-                        });
-                    await expect(ret).to.be.rejectedWith(error);
-                } finally {
-                    loadRecursiveStub.restore();
-                }
+                await expect(ret).to.be.rejectedWith(error);
             });
 
             it('should return a list of initialized modules if the call succeeds', async () => {
@@ -379,51 +331,42 @@ describe('ConstructBuilder', () => {
                             'ignore-02.java',
                             'module-01.js',
                             'module-02.js',
-                        ]
+                        ],
                     ),
                     _createDirList(
                         ['child_11'],
-                        ['ignore-11.cs', 'module-11.js', 'module-12.js']
+                        ['ignore-11.cs', 'module-11.js', 'module-12.js'],
                     ),
                     _createDirList(
                         [],
-                        ['ignore-21.rs', 'module-21.js', 'module-22.js']
+                        ['ignore-21.rs', 'module-21.js', 'module-22.js'],
                     ),
                     _createDirList(
                         [],
-                        ['ignore-111.txt', 'module-111.js', 'module-112.js']
+                        ['ignore-111.txt', 'module-111.js', 'module-112.js'],
                     ),
                 ];
-                _fsMock.__dirData = dirTree;
+                _readdirData = dirTree;
 
                 const expectedConstructs: ConstructFactory<Construct>[] = [];
 
-                _loadModuleStub.callsFake((path) => {
+                _loadModuleStub.callsFake((path: string) => {
                     const construct = new MockConstructFactory(path);
                     expectedConstructs.push(construct);
                     return construct;
                 });
 
-                const ret = ConstructBuilder._loadRecursive(dir);
+                const modules = await ConstructBuilder._loadRecursive(dir);
 
-                await Promise.mapSeries(dirTree, async (item, iteration) => {
-                    await _loadRecursiveCtrl.resolveUntil(
-                        _loadRecursiveCtrl.steps.END,
-                        iteration
-                    );
-                    await _asyncHelper.wait(10)();
-                });
-
-                const modules = await expect(ret).to.have.been.fulfilled;
                 expect(modules).to.have.length(expectedConstructs.length);
 
-                modules.forEach((module, index) => {
+                modules.forEach((module: any, index: number) => {
                     expect(module).to.be.an('object');
                     expect(module.construct).to.be.an.instanceof(
-                        ConstructFactory
+                        ConstructFactory,
                     );
                     expect(expectedConstructs).to.deep.include(
-                        module.construct
+                        module.construct,
                     );
 
                     expect(module.directory).to.be.an.instanceof(DirInfo);
@@ -437,9 +380,8 @@ describe('ConstructBuilder', () => {
             const inputs = _testValues.allButString('');
             const error = 'Invalid rootPath (arg #1)';
 
-            inputs.forEach((rootPath) => {
-                const wrapper = (): ConstructBuilderType =>
-                    new ConstructBuilder(rootPath);
+            inputs.forEach((rootPath: any) => {
+                const wrapper = (): any => new ConstructBuilder(rootPath);
 
                 expect(wrapper).to.throw(error);
             });
@@ -447,7 +389,7 @@ describe('ConstructBuilder', () => {
 
         it('should return an object with the expected methods and properties', () => {
             const rootPath = _testValues.getString('rootPath');
-            const builder = new ConstructBuilder(rootPath);
+            const builder = _createInstance(rootPath);
 
             expect(builder).to.be.an('object');
             expect(builder.build).to.be.a('function');
@@ -455,8 +397,8 @@ describe('ConstructBuilder', () => {
     });
 
     describe('build()', () => {
-        let _loadRecursiveStub;
-        let _factoryModules;
+        let _loadRecursiveStub: any;
+        let _factoryModules: any;
 
         beforeEach(() => {
             _factoryModules = [];
@@ -479,7 +421,7 @@ describe('ConstructBuilder', () => {
             const inputs = _testValues.allButObject();
             const error = 'Invalid scope (arg #1)';
 
-            const result = Promise.map(inputs, (scope) => {
+            const result = Promise.map(inputs, (scope: any) => {
                 const builder = _createInstance();
 
                 const ret = builder.build(scope);
@@ -491,17 +433,15 @@ describe('ConstructBuilder', () => {
 
         it('should asynchronously load all of the factory modules', async () => {
             const rootPath = _testValues.getString('rootPath');
-            const builder = new ConstructBuilder(rootPath);
-            const scope = _createScope();
+            const builder = _createInstance(rootPath);
+            const scope = _createScope() as any;
             const expectedFactories = _createFactoryModules(10);
 
             _factoryModules = expectedFactories;
 
             expect(_loadRecursiveStub).to.not.have.been.called;
 
-            await builder.build(scope);
-
-            expect(_loadRecursiveStub).to.have.been.calledOnce;
+            await builder.build(scope, {});
 
             expect(_loadRecursiveStub).to.have.been.calledOnce;
             expect(_loadRecursiveStub.args[0][0]).to.be.an.instanceof(DirInfo);
@@ -512,32 +452,34 @@ describe('ConstructBuilder', () => {
 
         it('should reject the promise if the load recursive method fails', async () => {
             const rootPath = _testValues.getString('rootPath');
-            const builder = new ConstructBuilder(rootPath);
-            const scope = _createScope();
+            const builder = _createInstance(rootPath);
+            const scope = _createScope() as any;
             const expectedFactories = _createFactoryModules(10);
             const error = new Error('something went wrong!');
 
             _factoryModules = expectedFactories;
 
             _loadRecursiveStub.rejects(error);
-            const ret = builder.build(scope);
+            const ret = builder.build(scope, {});
 
             await expect(ret).to.be.rejectedWith(error);
         });
 
         it('should initialize all loaded construct factories with default props', async () => {
             const builder = _createInstance();
-            const scope = _createScope();
+            const scope = _createScope() as any;
             _factoryModules = _createFactoryModules(10);
 
-            const stubs = _factoryModules.map(({ construct, directory }) => ({
-                init: _sinon.stub(construct, 'init'),
-                directory,
-            }));
+            const stubs = _factoryModules.map(
+                ({ construct, directory }: any) => ({
+                    init: _sinon.stub(construct, 'init').resolves(),
+                    directory,
+                }),
+            );
 
-            await builder.build(scope);
+            await builder.build(scope, {});
 
-            stubs.forEach((stubs, index) => {
+            stubs.forEach((stubs: any, index: number) => {
                 const { init } = stubs;
 
                 expect(init).to.have.been.calledOnce;
@@ -549,13 +491,15 @@ describe('ConstructBuilder', () => {
 
         it('should initialize all loaded construct factories with specified props', async () => {
             const builder = _createInstance();
-            const scope = _createScope();
+            const scope = _createScope() as any;
             _factoryModules = _createFactoryModules(10);
 
-            const stubs = _factoryModules.map(({ construct, directory }) => ({
-                init: _sinon.stub(construct, 'init'),
-                directory,
-            }));
+            const stubs = _factoryModules.map(
+                ({ construct, directory }: any) => ({
+                    init: _sinon.stub(construct, 'init').resolves(),
+                    directory,
+                }),
+            );
 
             const props = {
                 foo: _testValues.getString('foo'),
@@ -563,7 +507,7 @@ describe('ConstructBuilder', () => {
 
             await builder.build(scope, props);
 
-            stubs.forEach((stubs, index) => {
+            stubs.forEach((stubs: any, index: number) => {
                 const { init } = stubs;
 
                 expect(init).to.have.been.calledOnce;
@@ -575,20 +519,22 @@ describe('ConstructBuilder', () => {
 
         it('should filter out any modules that are not constructs', async () => {
             const builder = _createInstance();
-            const scope = _createScope();
+            const scope = _createScope() as any;
             _factoryModules = _createFactoryModules(10);
 
             _factoryModules.forEach(
-                (factory) =>
+                (factory: any) =>
                     (factory.construct = {
                         init: (): void => undefined,
-                    })
+                    }),
             );
 
-            const stubs = _factoryModules.map(({ construct, directory }) => ({
-                init: _sinon.stub(construct, 'init'),
-                directory,
-            }));
+            const stubs = _factoryModules.map(
+                ({ construct, directory }: any) => ({
+                    init: _sinon.stub(construct, 'init'),
+                    directory,
+                }),
+            );
 
             const props = {
                 foo: _testValues.getString('foo'),
@@ -596,7 +542,7 @@ describe('ConstructBuilder', () => {
 
             await builder.build(scope, props);
 
-            stubs.forEach((stubs, index) => {
+            stubs.forEach((stubs: any, index: number) => {
                 const { init } = stubs;
 
                 expect(init).to.not.have.been.called;
@@ -605,36 +551,42 @@ describe('ConstructBuilder', () => {
 
         it('should reject the promise if any of the init methods fails', async () => {
             const builder = _createInstance();
-            const scope = _createScope();
+            const scope = _createScope() as any;
             const error = new Error('something went wrong!');
             _factoryModules = _createFactoryModules(10);
 
             const failIndex = Math.floor(Math.random() * 10);
 
-            _factoryModules.map(({ construct, directory }, index) => {
-                const init = _sinon.stub(construct, 'init');
-                if (index === failIndex) {
-                    init.resolves();
-                } else {
-                    init.rejects(error);
-                }
-                return {
-                    init,
-                    directory,
-                };
-            });
+            _factoryModules.map(
+                ({ construct, directory }: any, index: number) => {
+                    const init = _sinon.stub(construct, 'init');
+                    if (index === failIndex) {
+                        init.rejects(error);
+                    } else {
+                        init.resolves();
+                    }
+                    return {
+                        init,
+                        directory,
+                    };
+                },
+            );
 
-            const ret = builder.build(scope);
+            const ret = builder.build(scope, {});
 
             await expect(ret).to.be.rejectedWith(error);
         });
 
         it('should resolve the promise if all of the init methods succeed', async () => {
             const builder = _createInstance();
-            const scope = _createScope();
+            const scope = _createScope() as any;
             _factoryModules = _createFactoryModules(10);
 
-            const ret = builder.build(scope);
+            _factoryModules.forEach(({ construct }: any) =>
+                _sinon.stub(construct, 'init').resolves(),
+            );
+
+            const ret = builder.build(scope, {});
 
             await expect(ret).to.be.fulfilled;
         });

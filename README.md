@@ -20,12 +20,12 @@ file verbose and hard to manage as the size of the stack grows.
 This library attempts to address this limitation by providing a few utilities
 that allow:
 
--   Creation of stacks by loading resources defined within individual files
-    instead of cramming multiple resource configurations into a single file.
--   The ability to use the organization of resource files on the file system to
-    while configuring the resources. For example, resources that represent
-    different API routes can be automatically configured based on the path to the
-    resource.
+- Creation of stacks by loading resources defined within individual files
+  instead of cramming multiple resource configurations into a single file.
+- The ability to use the organization of resource files on the file system to
+  while configuring the resources. For example, resources that represent
+  different API routes can be automatically configured based on the path to the
+  resource.
 
 While this project draws its inspiration from the now defunct
 [wysknd-aws-cf-generator](https://github.com/vamship/grunt-wysknd-aws-cf-generator),
@@ -44,11 +44,11 @@ npm install --save-dev @vamship/cdk-utils
 This library exposes two key components that allow the development of CDK
 resources:
 
--   `ConstructFactory`: This is a class that serves as a lightweight wrapper
-    around the initialization and configuration of CDK resources.
--   `ConstructBuilder`: This class recursively traverses the file system, and
-    loads and initializes all resources found on the file system. Only resources
-    of type `ConstructFactory` are loaded, and all other resources are ignored.
+- `ConstructFactory`: This is a class that serves as a lightweight wrapper
+  around the initialization and configuration of CDK resources.
+- `ConstructBuilder`: This class recursively traverses the file system, and
+  loads and initializes all resources found on the file system. Only resources
+  of type `ConstructFactory` are loaded, and all other resources are ignored.
 
 ### Example
 

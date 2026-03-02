@@ -1,6 +1,6 @@
 import { argValidator as _argValidator } from '@vamship/arg-utils';
-import { config as awsConfig, KMS, SharedIniFileCredentials } from 'aws-sdk';
-import { Promise } from 'bluebird';
+import AWS from 'aws-sdk';
+import Promise from 'bluebird';
 
 /**
  * Utility class that can be used to encrypt secret values using a kms key.
@@ -32,21 +32,23 @@ export default class SecretManager {
      */
     public static async create(
         alias: string,
-        profile = process.env.AWS_PROFILE
-    ): Promise<SecretManager> {
+        profile = process.env.AWS_PROFILE,
+    ) {
         _argValidator.checkString(alias, 1, 'Invalid alias (arg #1)');
         _argValidator.checkString(profile, 1, 'Invalid profile (arg #2)');
 
         alias = `alias/${alias}`;
 
-        awsConfig.credentials = new SharedIniFileCredentials({ profile });
-        const kms = new KMS();
+        AWS.config.credentials = new AWS.SharedIniFileCredentials({ profile });
+        const kms = new AWS.KMS();
 
         const listAliases = Promise.promisify(kms.listAliases.bind(kms));
 
-        const result = await listAliases({});
-        const keyInfo = result.Aliases.find(
-            ({ AliasName: aliasName }) => aliasName === alias
+        // eslint-disable-next-line tsel/no-explicit-any
+        const result: any = await listAliases();
+        const keyInfo = result.Aliases?.find(
+            // eslint-disable-next-line tsel/no-explicit-any
+            ({ AliasName: aliasName }: any) => aliasName === alias,
         );
 
         if (!keyInfo) {
@@ -57,7 +59,7 @@ export default class SecretManager {
 
         if (!keyId) {
             throw new Error(
-                `Alias is not associated with a target key id: [${alias}]`
+                `Alias is not associated with a target key id: [${alias}]`,
             );
         }
 
@@ -71,17 +73,18 @@ export default class SecretManager {
      *
      * @returns An encrypted string using the key associated with this class.
      */
-    public async encrypt(plaintext: string): Promise<string> {
+    public async encrypt(plaintext: string) {
         _argValidator.checkString(plaintext, 1, 'Invalid plaintext (arg #1)');
 
-        awsConfig.credentials = new SharedIniFileCredentials({
+        AWS.config.credentials = new AWS.SharedIniFileCredentials({
             profile: this._profile,
         });
-        const kms = new KMS();
+        const kms = new AWS.KMS();
 
         const encrypt = Promise.promisify(kms.encrypt.bind(kms));
 
-        const result = await encrypt({
+        // eslint-disable-next-line tsel/no-explicit-any
+        const result: any = await (encrypt as any)({
             KeyId: this._keyId,
             Plaintext: plaintext,
         });

@@ -2,10 +2,26 @@
     "name": "@vamship/cdk-utils",
     "version": "2.0.1",
     "description": "A library of utilities that will allow CDK projects to be composed from modular files",
+    "type": "module",
     "main": "src/index.js",
     "scripts": {
-        "all": "gulp --series format lint build test-unit clean",
-        "test": "gulp test-unit"
+        "clean": "gulp clean",
+        "format": "gulp format",
+        "lint": "gulp lint",
+        "lint-fix": "gulp lint-fix",
+        "build": "gulp build",
+        "test": "cross-env NODE_ENV=test dotenv-load gulp --series clean build test-unit",
+        "package": "cross-env NODE_ENV=test dotenv-load gulp --series clean format lint build test-unit package",
+        "publish": "gulp publish",
+        "docs": "gulp docs",
+        "all": "cross-env NODE_ENV=test dotenv-load gulp --series clean format lint build test-unit clean",
+        "watch:build": "gulp watch-build",
+        "watch:test": "cross-env NODE_ENV=development dotenv-load gulp watch-test-unit",
+        "watch:lint": "gulp watch-lint"
+    },
+    "engines": {
+        "node": ">= 20.19.0",
+        "npm": ">= 10.2.4"
     },
     "files": [
         "package.json",
@@ -20,24 +36,42 @@
     "author": "Vamshi K Ponnapalli <vamshi.ponnapalli@gmail.com>",
     "license": "MIT",
     "devDependencies": {
-        "@types/mocha": "^10.0.1",
-        "@types/node": "^18.11.19",
-        "@vamship/build-utils": "1.1.0",
-        "@vamship/test-utils": "^2.5.8",
+        "@types/bluebird": "^3.5.42",
+        "@types/chai-as-promised": "^8.0.2",
+        "@types/mocha": "^10.0.10",
+        "@types/node": "^24.2.0",
+        "@types/sinon-chai": "^4.0.0",
+        "@typescript-eslint/eslint-plugin": "^8.39.0",
+        "@typescript-eslint/parser": "^8.39.0",
+        "@vamship/build-utils": "^2.6.0",
+        "@vamship/test-utils": "^3.2.0",
         "aws-cdk-lib": "^2.63.2",
         "aws-sdk": "^2.1310.0",
-        "chai": "^4.3.7",
-        "chai-as-promised": "^7.1.1",
+        "c8": "^10.1.3",
+        "chai": "^5.2.1",
+        "chai-as-promised": "^8.0.1",
         "constructs": "^10.1.243",
-        "rewire": "^6.0.0",
-        "sinon": "^15.0.1",
-        "sinon-chai": "^3.7.0",
-        "typedoc": "^0.23.24"
+        "cross-env": "^10.0.0",
+        "dotenv-load": "^3.0.0",
+        "eslint": "^9.19.0",
+        "esmock": "^2.7.1",
+        "fancy-log": "^2.0.0",
+        "gulp": "^5.0.1",
+        "gulp-eslint-new": "^2.4.3",
+        "gulp-prettier": "^5.0.0",
+        "gulp-typescript": "^6.0.0-alpha.1",
+        "gulp-zip": "^6.0.0",
+        "mocha": "^11.7.1",
+        "prettier": "^3.4.2",
+        "sinon": "^21.0.0",
+        "sinon-chai": "^4.0.0",
+        "typedoc": "^0.28.16",
+        "typescript": "^5.9.3"
     },
     "dependencies": {
-        "@vamship/arg-utils": "^2.4.19",
-        "@vamship/error-types": "^1.8.0",
-        "ajv": "^8.12.0",
+        "@vamship/arg-utils": "^3.2.0",
+        "@vamship/error-types": "^2.1.0",
+        "ajv": "^8.17.1",
         "aws-cdk-lib": "^2.63.2",
         "bluebird": "^3.7.2",
         "constructs": "^10.1.243"
@@ -56,7 +90,7 @@
     },
     "homepage": "https://github.com/vamship/cdk-utils#readme",
     "buildMetadata": {
-        "projectType": "lib",
+        "type": "lib",
         "language": "ts"
     }
 }

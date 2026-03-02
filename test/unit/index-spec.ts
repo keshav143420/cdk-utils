@@ -1,14 +1,14 @@
 import 'mocha';
-import _chai, { expect } from 'chai';
+import { expect, use as _useWithChai } from 'chai';
 import _sinonChai from 'sinon-chai';
 import _chaiAsPromised from 'chai-as-promised';
 
-_chai.use(_sinonChai);
-_chai.use(_chaiAsPromised);
+_useWithChai(_sinonChai);
+_useWithChai(_chaiAsPromised);
 
-import * as _index from '../../src/index';
-import ConstructBuilder from '../../src/construct-builder';
-import ConstructFactory from '../../src/construct-factory';
+import * as _index from '../../src/index.js';
+import ConstructBuilder from '../../src/construct-builder.js';
+import ConstructFactory from '../../src/construct-factory.js';
 
 describe('index', () => {
     it('should implement methods required by the interface', function () {

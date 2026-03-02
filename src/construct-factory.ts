@@ -2,7 +2,7 @@ import { argValidator as _argValidator } from '@vamship/arg-utils';
 import { IConstruct } from 'constructs';
 import { Stack, CfnResource } from 'aws-cdk-lib';
 
-import IConstructProps from './construct-props';
+import IConstructProps from './construct-props.js';
 
 /**
  * Represents a construct and its related init promise.
@@ -78,7 +78,7 @@ class ConstructInfo<TConstruct extends IConstruct | CfnResource> {
  * between constructs.
  */
 export default abstract class ConstructFactory<
-    TConstruct extends IConstruct | CfnResource
+    TConstruct extends IConstruct | CfnResource,
 > {
     private _id: string;
     private _constructMap: {
@@ -140,7 +140,7 @@ export default abstract class ConstructFactory<
      */
     protected abstract _init(
         scope: Stack | CfnResource,
-        props: IConstructProps
+        props: IConstructProps,
     ): Promise<TConstruct>;
 
     /**
@@ -155,14 +155,14 @@ export default abstract class ConstructFactory<
      * @returns A promise that will be resolved after the construct
      *          has been initialized.
      */
-    async init(scope: Stack, props: IConstructProps): Promise<void> {
+    async init(scope: Stack, props: IConstructProps) {
         _argValidator.checkObject(scope, 'Invalid scope (arg #1)');
         _argValidator.checkObject(props, 'Invalid props (arg #2)');
 
         const constructInfo = this._getConstructInfo(scope);
         if (constructInfo.instance) {
             throw new Error(
-                `Construct has already been initialized for scope [${scope.stackName}]`
+                `Construct has already been initialized for scope [${scope.stackName}]`,
             );
         }
 
@@ -170,7 +170,7 @@ export default abstract class ConstructFactory<
             const construct = await this._init(scope, Object.assign({}, props));
             constructInfo.resolve(construct);
         } catch (ex) {
-            constructInfo.reject(ex);
+            constructInfo.reject(ex as Error);
             throw ex;
         }
     }
@@ -183,7 +183,7 @@ export default abstract class ConstructFactory<
      *
      * @returns Reference to the construct object.
      */
-    async getConstruct(scope: Stack): Promise<TConstruct> {
+    async getConstruct(scope: Stack) {
         _argValidator.checkObject(scope, 'Invalid scope (arg #1)');
 
         return await this._getConstructInfo(scope).promise;
